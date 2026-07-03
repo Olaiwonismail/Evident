@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api.js";
-import { naira, formatTime } from "../lib/format.js";
-import { Card, Spinner, EmptyState, CopyButton } from "./ui.jsx";
+import { naira, formatTime, groupDigits } from "../lib/format.js";
+import { Card, CardHeader, Spinner, EmptyState, CopyButton } from "./ui.jsx";
 
 const entryIcon = {
   contribution: ["🟢", "text-emerald-600"],
@@ -37,27 +37,29 @@ export default function LedgerTab({ collectiveId, collective }) {
           </p>
         </Card>
 
-        <Card className="bg-slate-900 p-6 text-white">
+        <Card className="border-l-4 border-l-emerald-500 p-6">
           <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Pay dues to</p>
-          <p className="mt-2 font-mono text-3xl font-bold tracking-widest">
-            {collective.bank_account_number}
+          <p className="mt-2 font-mono text-3xl font-bold tracking-wider text-slate-900">
+            {groupDigits(collective.bank_account_number)}
           </p>
-          <div className="mt-2 flex items-center justify-between">
-            <p className="text-sm text-slate-300">{collective.bank_name}</p>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <p className="text-sm text-slate-500">{collective.bank_name}</p>
             <CopyButton text={collective.bank_account_number} label="Copy number" />
           </div>
+          <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
+            Transfer from any Nigerian bank — it lands on the public ledger automatically.
+          </p>
         </Card>
       </div>
 
       <Card>
-        <div className="border-b border-slate-100 px-6 py-4">
-          <h2 className="font-semibold">Public ledger</h2>
-          <p className="text-xs text-slate-400">
-            Append-only. Every naira in and out, visible to every member.
-          </p>
-        </div>
+        <CardHeader
+          title="Public ledger"
+          subtitle="Append-only. Every naira in and out, visible to every member."
+        />
         {entries.length === 0 ? (
           <EmptyState
+            icon="📖"
             title="No transactions yet"
             subtitle="The first transfer to the account above will appear here automatically."
           />
@@ -74,12 +76,14 @@ export default function LedgerTab({ collectiveId, collective }) {
                       {e.actor_name} · {formatTime(e.timestamp)}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-bold ${amountColor}`}>
+                  <div className="shrink-0 text-right">
+                    <p className={`text-sm font-bold tabular-nums ${amountColor}`}>
                       {e.amount >= 0 ? "+" : ""}
                       {naira(e.amount)}
                     </p>
-                    <p className="text-xs text-slate-400">bal {naira(e.balance_after)}</p>
+                    <p className="text-xs tabular-nums text-slate-400">
+                      bal {naira(e.balance_after)}
+                    </p>
                   </div>
                 </li>
               );

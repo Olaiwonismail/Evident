@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +10,14 @@ from app.models.member import Member
 from app.services import nomba_client
 from app.config import settings
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/collectives", tags=["collectives"])
+
+
+def _extract_nuban(va: dict) -> str | None:
+    """The sandbox VA payload doesn't always match the documented shape."""
+    return va.get("bankAccountNumber") or va.get("accountNumber") or va.get("bankAccountNo")
 
 
 class CreateCollectiveRequest(BaseModel):
@@ -58,10 +67,17 @@ async def create_collective(body: CreateCollectiveRequest, db: AsyncSession = De
     callback_url = f"{settings.app_base_url}/webhooks/nomba"
     try:
         va = await nomba_client.create_virtual_account(collective_id, body.name, callback_url)
+        logger.info("Nomba VA created for collective %s: %s", collective_id, va)
+        if not _extract_nuban(va):
+            # some create responses omit the NUBAN; the fetch-by-ref endpoint returns it
+            va = await nomba_client.fetch_virtual_account(collective_id)
+            logger.info("Nomba VA fetched by ref %s: %s", collective_id, va)
         # sandbox VA responses carry no accountId/walletId — fall back to the NUBAN
-        collective.virtual_account_id = va.get("accountId") or va.get("walletId") or va.get("bankAccountNumber")
-        collective.bank_account_number = va.get("bankAccountNumber")
+        collective.virtual_account_id = va.get("accountId") or va.get("walletId") or _extract_nuban(va)
+        collective.bank_account_number = _extract_nuban(va)
         collective.bank_name = va.get("bankName")
+        if not collective.bank_account_number:
+            raise ValueError(f"no account number in Nomba response: {va}")
     except Exception as exc:
         await db.rollback()
         raise HTTPException(status_code=502, detail=f"Nomba virtual account creation failed: {exc}")
@@ -82,6 +98,19 @@ async def get_collective(collective_id: str, db: AsyncSession = Depends(get_db))
     collective = result.scalar_one_or_none()
     if not collective:
         raise HTTPException(status_code=404, detail="Collective not found")
+    if not collective.bank_account_number:
+        # backfill collectives created before the NUBAN made it into the create response
+        try:
+            va = await nomba_client.fetch_virtual_account(collective_id)
+            logger.info("Backfill VA fetch for collective %s: %s", collective_id, va)
+            nuban = _extract_nuban(va)
+            if nuban:
+                collective.bank_account_number = nuban
+                collective.bank_name = collective.bank_name or va.get("bankName")
+                collective.virtual_account_id = collective.virtual_account_id or nuban
+                await db.commit()
+        except Exception:
+            logger.warning("VA backfill failed for collective %s", collective_id, exc_info=True)
     return collective
 
 

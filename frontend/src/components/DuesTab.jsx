@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { naira, formatTime } from "../lib/format.js";
-import { Card, Spinner, EmptyState, StatusBadge } from "./ui.jsx";
+import { Card, CardHeader, Spinner, EmptyState, StatusBadge } from "./ui.jsx";
 
 export default function DuesTab({ collectiveId, me }) {
   const q = useQuery({
@@ -12,6 +12,7 @@ export default function DuesTab({ collectiveId, me }) {
 
   if (q.isLoading) return <Spinner />;
   const { dues_amount, dues_frequency, total_paid = 0, contributions = [] } = q.data || {};
+  const pct = dues_amount ? Math.min(100, Math.round((total_paid / dues_amount) * 100)) : null;
 
   return (
     <div className="space-y-6">
@@ -19,6 +20,19 @@ export default function DuesTab({ collectiveId, me }) {
         <Card className="p-5">
           <p className="text-xs uppercase tracking-wider text-slate-400">Total paid</p>
           <p className="mt-1 text-2xl font-bold text-emerald-600">{naira(total_paid)}</p>
+          {pct !== null && (
+            <div className="mt-3">
+              <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <p className="mt-1 text-xs text-slate-400">
+                {pct >= 100 ? "Dues covered ✓" : `${pct}% of ${naira(dues_amount)}`}
+              </p>
+            </div>
+          )}
         </Card>
         <Card className="p-5">
           <p className="text-xs uppercase tracking-wider text-slate-400">Expected dues</p>
@@ -34,15 +48,16 @@ export default function DuesTab({ collectiveId, me }) {
       </div>
 
       <Card>
-        <div className="border-b border-slate-100 px-6 py-4">
-          <h2 className="font-semibold">Your contributions</h2>
-          <p className="text-xs text-slate-400">
-            Pay from the bank account whose number matches your registered phone number so we can
-            recognise you automatically.
-          </p>
-        </div>
+        <CardHeader
+          title="Your contributions"
+          subtitle="Pay from the bank account whose number matches your registered phone number so we can recognise you automatically."
+        />
         {contributions.length === 0 ? (
-          <EmptyState title="No contributions yet" subtitle="Transfers you make will show up here." />
+          <EmptyState
+            icon="💸"
+            title="No contributions yet"
+            subtitle="Transfers you make will show up here."
+          />
         ) : (
           <ul className="divide-y divide-slate-100">
             {contributions.map((c) => (

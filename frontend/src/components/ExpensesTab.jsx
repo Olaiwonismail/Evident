@@ -3,10 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { naira, formatTime } from "../lib/format.js";
 import {
-  Card, Button, Input, Select, Spinner, EmptyState, StatusBadge, ErrorNote,
+  Card, CardHeader, Button, Input, Select, Spinner, EmptyState, StatusBadge, ErrorNote,
 } from "./ui.jsx";
 
 export default function ExpensesTab({ collectiveId, me }) {
+  const [open, setOpen] = useState(false);
   const expenses = useQuery({
     queryKey: ["expenses", collectiveId],
     queryFn: () => api.getExpenses(collectiveId),
@@ -15,19 +16,28 @@ export default function ExpensesTab({ collectiveId, me }) {
 
   return (
     <div className="space-y-6">
-      {me && <SubmitExpense collectiveId={collectiveId} me={me} />}
+      {me && open && (
+        <SubmitExpense collectiveId={collectiveId} me={me} onClose={() => setOpen(false)} />
+      )}
 
       <Card>
-        <div className="border-b border-slate-100 px-6 py-4">
-          <h2 className="font-semibold">Expense requests</h2>
-          <p className="text-xs text-slate-400">
-            Money only leaves the pool with a public reason and committee approval.
-          </p>
-        </div>
+        <CardHeader
+          title="Expense requests"
+          subtitle="Money only leaves the pool with a public reason and committee approval."
+          action={
+            me && !open ? (
+              <Button onClick={() => setOpen(true)}>+ New request</Button>
+            ) : null
+          }
+        />
         {expenses.isLoading ? (
           <Spinner />
         ) : (expenses.data || []).length === 0 ? (
-          <EmptyState title="No expenses yet" subtitle="Requests submitted by members appear here." />
+          <EmptyState
+            icon="🧾"
+            title="No expenses yet"
+            subtitle="Requests submitted by members appear here."
+          />
         ) : (
           <ul className="divide-y divide-slate-100">
             {expenses.data.map((e) => (
@@ -51,9 +61,8 @@ export default function ExpensesTab({ collectiveId, me }) {
   );
 }
 
-function SubmitExpense({ collectiveId, me }) {
+function SubmitExpense({ collectiveId, me, onClose }) {
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     amount: "", reason: "", receipt_url: "", recipient_account: "", recipient_bank_code: "",
   });
@@ -82,14 +91,9 @@ function SubmitExpense({ collectiveId, me }) {
       queryClient.invalidateQueries({ queryKey: ["expenses", collectiveId] });
       setForm({ amount: "", reason: "", receipt_url: "", recipient_account: "", recipient_bank_code: "" });
       lookup.reset();
-      setOpen(false);
+      onClose();
     },
   });
-
-  if (!open)
-    return (
-      <Button onClick={() => setOpen(true)}>+ Request an expense</Button>
-    );
 
   const verified = lookup.isSuccess && lookup.data?.accountName;
 
@@ -154,7 +158,7 @@ function SubmitExpense({ collectiveId, me }) {
           <Button type="submit" disabled={!verified || submit.isPending}>
             {submit.isPending ? "Submitting…" : "Submit for approval"}
           </Button>
-          <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
         </div>

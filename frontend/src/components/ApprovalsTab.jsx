@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { naira, formatTime } from "../lib/format.js";
-import { Card, Button, Spinner, EmptyState, ErrorNote, Badge } from "./ui.jsx";
+import { Card, CardHeader, Button, Spinner, EmptyState, ErrorNote, Badge } from "./ui.jsx";
 
 export default function ApprovalsTab({ collectiveId, me }) {
   const queryClient = useQueryClient();
@@ -37,16 +37,18 @@ export default function ApprovalsTab({ collectiveId, me }) {
   return (
     <div className="space-y-6">
       <Card>
-        <div className="border-b border-slate-100 px-6 py-4">
-          <h2 className="font-semibold">Awaiting your approval</h2>
-          <p className="text-xs text-slate-400">
-            Approving disburses the money to the verified recipient immediately.
-          </p>
-        </div>
+        <CardHeader
+          title={`Awaiting your approval${pending.length ? ` (${pending.length})` : ""}`}
+          subtitle="Approving disburses the money to the verified recipient immediately."
+        />
         {expenses.isLoading ? (
           <Spinner />
         ) : pending.length === 0 ? (
-          <EmptyState title="Nothing pending" subtitle="New expense requests will land here." />
+          <EmptyState
+            icon="✅"
+            title="Nothing pending"
+            subtitle="New expense requests will land here."
+          />
         ) : (
           <ul className="divide-y divide-slate-100">
             {pending.map((e) => (
@@ -65,16 +67,18 @@ export default function ApprovalsTab({ collectiveId, me }) {
       </Card>
 
       <Card>
-        <div className="border-b border-slate-100 px-6 py-4">
-          <h2 className="font-semibold">Unmatched transfers</h2>
-          <p className="text-xs text-slate-400">
-            Payments received that we couldn't match to a member — nothing is silently absorbed.
-          </p>
-        </div>
+        <CardHeader
+          title="Unmatched transfers"
+          subtitle="Payments received that we couldn't match to a member — nothing is silently absorbed."
+        />
         {unmatched.isLoading ? (
           <Spinner />
         ) : (unmatched.data || []).length === 0 ? (
-          <EmptyState title="All clear" subtitle="Every transfer has been matched to a member." />
+          <EmptyState
+            icon="🎯"
+            title="All clear"
+            subtitle="Every transfer has been matched to a member."
+          />
         ) : (
           <ul className="divide-y divide-slate-100">
             {unmatched.data.map((u) => (
@@ -106,15 +110,15 @@ function PendingRow({ expense, approve, reject }) {
 
   return (
     <li className="px-6 py-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{expense.reason}</p>
           <p className="text-xs text-slate-400">
             to {expense.recipient_name} · {formatTime(expense.timestamp)}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <p className="text-sm font-bold">{naira(expense.amount)}</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm font-bold tabular-nums">{naira(expense.amount)}</p>
           <Button disabled={busy} onClick={() => approve.mutate(expense.id)}>
             {approve.isPending ? "Disbursing…" : "Approve & pay"}
           </Button>

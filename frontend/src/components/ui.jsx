@@ -8,6 +8,18 @@ export function Card({ children, className = "" }) {
   );
 }
 
+export function CardHeader({ title, subtitle, action }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-6 py-4">
+      <div className="min-w-0">
+        <h2 className="font-semibold">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
 const badgeTones = {
   green: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   amber: "bg-amber-50 text-amber-700 ring-amber-600/20",
@@ -55,7 +67,7 @@ export function Button({ children, variant = "primary", className = "", ...props
   };
   return (
     <button
-      className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed ${styles[variant]} ${className}`}
+      className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-1 active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 ${styles[variant]} ${className}`}
       {...props}
     >
       {children}
@@ -98,11 +110,14 @@ export function Spinner() {
   );
 }
 
-export function EmptyState({ title, subtitle }) {
+export function EmptyState({ title, subtitle, icon = "🗒️" }) {
   return (
-    <div className="py-10 text-center">
+    <div className="py-12 text-center">
+      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-lg">
+        {icon}
+      </div>
       <p className="text-sm font-medium text-slate-600">{title}</p>
-      {subtitle && <p className="mt-1 text-xs text-slate-400">{subtitle}</p>}
+      {subtitle && <p className="mx-auto mt-1 max-w-xs text-xs text-slate-400">{subtitle}</p>}
     </div>
   );
 }

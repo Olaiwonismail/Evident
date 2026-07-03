@@ -1,3 +1,7 @@
+// display-only grouping (e.g. 792 546 1234) — always copy the raw digits
+export const groupDigits = (s) =>
+  s ? String(s).replace(/^(\d{3})(\d{3})(\d+)$/, "$1 $2 $3") : s;
+
 export const naira = (n) =>
   new Intl.NumberFormat("en-NG", {
     style: "currency",

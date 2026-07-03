@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api.js";
+import { groupDigits } from "../lib/format.js";
 import { Card, Button, Input, Select, ErrorNote, CopyButton } from "../components/ui.jsx";
 
 export default function Landing() {
@@ -47,8 +48,11 @@ export default function Landing() {
           <div className="rounded-2xl bg-slate-900 p-6 text-center text-white">
             <p className="text-xs uppercase tracking-wider text-slate-400">Pay dues to</p>
             <p className="mt-2 font-mono text-3xl font-bold tracking-widest">
-              {c.bank_account_number}
+              {groupDigits(c.bank_account_number)}
             </p>
+            <div className="mt-3 flex justify-center">
+              <CopyButton text={c.bank_account_number} label="Copy number" />
+            </div>
             <p className="mt-1 text-sm text-slate-300">{c.bank_name}</p>
           </div>
 
@@ -88,6 +92,19 @@ export default function Landing() {
             Evident gives your association, co-op or alumni group a dedicated bank account with a
             live public ledger. No more “trust the treasurer” — trust the ledger.
           </p>
+          <div className="mx-auto mt-6 grid max-w-lg grid-cols-3 gap-3 text-center">
+            {[
+              ["🏦", "Dedicated account", "One NUBAN per group"],
+              ["📖", "Live public ledger", "Every transfer visible"],
+              ["🤝", "Committee approvals", "No solo spending"],
+            ].map(([icon, title, sub]) => (
+              <div key={title} className="rounded-2xl border border-slate-200 bg-white p-3">
+                <p className="text-lg">{icon}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-700">{title}</p>
+                <p className="mt-0.5 text-[11px] text-slate-400">{sub}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         <Card className="p-8">

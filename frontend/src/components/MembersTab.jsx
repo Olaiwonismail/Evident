@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { naira } from "../lib/format.js";
-import { Card, Button, Input, Select, Spinner, EmptyState, Badge, ErrorNote, CopyButton } from "./ui.jsx";
+import { Card, CardHeader, Button, Input, Select, Spinner, EmptyState, Badge, ErrorNote, CopyButton } from "./ui.jsx";
 
 const roleTone = { organizer: "purple", committee: "blue", member: "slate" };
 
 export default function MembersTab({ collectiveId, collective, isOrganizer }) {
+  const [inviting, setInviting] = useState(false);
   const members = useQuery({
     queryKey: ["members", collectiveId],
     queryFn: () => api.getMembers(collectiveId),
@@ -25,19 +26,22 @@ export default function MembersTab({ collectiveId, collective, isOrganizer }) {
 
   return (
     <div className="space-y-6">
-      {isOrganizer && <InviteMember collectiveId={collectiveId} />}
+      {isOrganizer && inviting && (
+        <InviteMember collectiveId={collectiveId} onClose={() => setInviting(false)} />
+      )}
 
       <Card>
-        <div className="border-b border-slate-100 px-6 py-4">
-          <h2 className="font-semibold">Members ({(members.data || []).length})</h2>
-          {dues ? (
-            <p className="text-xs text-slate-400">
-              Dues: {naira(dues)} {collective.dues_frequency}
-            </p>
-          ) : null}
-        </div>
+        <CardHeader
+          title={`Members (${(members.data || []).length})`}
+          subtitle={dues ? `Dues: ${naira(dues)} ${collective.dues_frequency}` : null}
+          action={
+            isOrganizer && !inviting ? (
+              <Button onClick={() => setInviting(true)}>+ Invite</Button>
+            ) : null
+          }
+        />
         {(members.data || []).length === 0 ? (
-          <EmptyState title="No members yet" />
+          <EmptyState icon="👥" title="No members yet" />
         ) : (
           <ul className="divide-y divide-slate-100">
             {members.data.map((m, i) => {
@@ -73,9 +77,8 @@ export default function MembersTab({ collectiveId, collective, isOrganizer }) {
   );
 }
 
-function InviteMember({ collectiveId }) {
+function InviteMember({ collectiveId, onClose }) {
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", email: "", role: "member" });
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -88,8 +91,6 @@ function InviteMember({ collectiveId }) {
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["members", collectiveId] }),
   });
-
-  if (!open) return <Button onClick={() => setOpen(true)}>+ Invite a member</Button>;
 
   if (invite.isSuccess) {
     const link = `${window.location.origin}/c/${collectiveId}?m=${invite.data.id}`;
@@ -115,7 +116,7 @@ function InviteMember({ collectiveId }) {
           >
             Invite another
           </Button>
-          <Button variant="secondary" onClick={() => setOpen(false)}>Done</Button>
+          <Button variant="secondary" onClick={onClose}>Done</Button>
         </div>
       </Card>
     );
@@ -152,7 +153,7 @@ function InviteMember({ collectiveId }) {
           <Button type="submit" disabled={invite.isPending}>
             {invite.isPending ? "Adding…" : "Add member"}
           </Button>
-          <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
         </div>
