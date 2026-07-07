@@ -65,6 +65,36 @@ async def _match_member(collective_id: str, sender_name: str, sender_account: st
     return result.scalar_one_or_none()
 
 
+async def _match_member_by_receiving_account(payload: dict, db: AsyncSession):
+    """The strong signal: which account RECEIVED the money. With per-member
+    pay-in accounts, a transfer into a member's own account is unambiguously
+    theirs — no sender guesswork, never unmatched."""
+    data = payload.get("data", {})
+    transaction = data.get("transaction", {})
+    order = data.get("order", {})
+    candidates = {
+        transaction.get("aliasAccountNumber"),
+        transaction.get("aliasAccountReference"),
+        transaction.get("accountNumber"),
+        transaction.get("bankAccountNumber"),
+        transaction.get("accountRef"),
+        order.get("accountRef"),
+    }
+    candidates = {c for c in candidates if c}
+    if not candidates:
+        return None
+    # accountRef for member accounts is "mbr_<member_id>"
+    ref_ids = {c[4:] for c in candidates if isinstance(c, str) and c.startswith("mbr_")}
+    conditions = [
+        Member.virtual_account_id.in_(candidates),
+        Member.bank_account_number.in_(candidates),
+    ]
+    if ref_ids:
+        conditions.append(Member.id.in_(ref_ids))
+    result = await db.execute(select(Member).where(or_(*conditions)))
+    return result.scalars().first()
+
+
 async def _find_collective(payload: dict, db: AsyncSession):
     """Nomba's create-VA response exposes no walletId, only accountRef and
     bankAccountNumber — so match the webhook against every identifier it may carry."""
@@ -114,7 +144,16 @@ async def process_payment_success(payload: dict, db: AsyncSession) -> None:
         logger.info("Duplicate webhook for %s — skipping", source_transfer_id)
         return
 
-    collective = await _find_collective(payload, db)
+    # strongest signal first: money into a member's OWN pay-in account is theirs.
+    member = await _match_member_by_receiving_account(payload, db)
+    if member:
+        collective_result = await db.execute(
+            select(Collective).where(Collective.id == member.collective_id)
+        )
+        collective = collective_result.scalar_one_or_none()
+    else:
+        collective = await _find_collective(payload, db)
+
     if not collective:
         logger.warning(
             "No collective matched webhook %s (walletId=%s)",
@@ -123,7 +162,9 @@ async def process_payment_success(payload: dict, db: AsyncSession) -> None:
         )
         return
 
-    member = await _match_member(collective.id, sender_name, sender_account, db)
+    # fall back to sender phone-matching only if the receiving account didn't pin a member
+    if member is None:
+        member = await _match_member(collective.id, sender_name, sender_account, db)
     expected = Decimal(str(collective.dues_amount)) if collective.dues_amount else None
 
     # reconciliation logic

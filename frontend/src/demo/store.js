@@ -8,6 +8,10 @@ const clone = (x) => (x === undefined ? x : JSON.parse(JSON.stringify(x)));
 let seq = 1000;
 const uid = (p) => `${p}${seq++}`;
 
+// a plausible 10-digit NUBAN for demo member pay-in accounts
+const fakeNuban = () => "80" + String(Math.floor(10000000 + Math.random() * 89999999));
+const DEMO_BANK = "Amucha MFB (Nomba)";
+
 const ago = (days, h = 10, m = 0) => {
   const t = new Date();
   t.setDate(t.getDate() - days);
@@ -89,6 +93,8 @@ function newCollective(data) {
         phone: data.organizer_phone || null,
         email: data.organizer_email || null,
         role: "organizer",
+        bank_account_number: fakeNuban(),
+        bank_name: DEMO_BANK,
         joined_at: new Date().toISOString(),
       },
     ],
@@ -129,7 +135,12 @@ function seed() {
     ["m8", "Chinedu Okafor", "07068901234", "member"],
   ];
   for (const [id, name, phone, role] of cast) {
-    c.members.push({ id, name, phone, email: null, role, joined_at: ago(40) });
+    c.members.push({
+      id, name, phone, email: null, role,
+      bank_account_number: fakeNuban(),
+      bank_name: DEMO_BANK,
+      joined_at: ago(40),
+    });
   }
 
   // --- May dues: everyone paid
@@ -387,6 +398,8 @@ export const demoApi = {
       phone: data.phone || null,
       email: data.email || null,
       role: data.role === "committee" ? "committee" : "member",
+      bank_account_number: fakeNuban(),
+      bank_name: DEMO_BANK,
       joined_at: new Date().toISOString(),
     };
     c.members.push(member);

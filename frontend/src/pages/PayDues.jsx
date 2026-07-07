@@ -52,6 +52,11 @@ export default function PayDues() {
   }
 
   const dues = collective.dues_amount;
+  // each member has their own dedicated pay-in account; money into it is
+  // matched to them automatically. Fall back to the collective account.
+  const payToNumber = me.bank_account_number || collective.bank_account_number;
+  const payToBank = me.bank_name || collective.bank_name;
+  const hasPersonalAccount = !!me.bank_account_number;
 
   const startWaiting = async () => {
     const current = await api.getContributions(collectiveId, me.id);
@@ -95,8 +100,9 @@ export default function PayDues() {
         <div className="mb-6 text-center">
           <h1 className="text-lg font-bold text-ink">Pay your dues</h1>
           <p className="mt-1 text-sm text-muted">
-            Transfer from any Nigerian bank app. Send from the account registered to your phone
-            number ({me.phone || "your registered number"}) so it's matched to you automatically.
+            {hasPersonalAccount
+              ? "Transfer any amount from any Nigerian bank into your personal account below — it's credited to you automatically."
+              : "Transfer from any Nigerian bank app to the collective account below."}
           </p>
         </div>
 
@@ -109,15 +115,17 @@ export default function PayDues() {
             <p className="mt-0.5 text-xs text-on-panel-dim">{collective.dues_frequency} dues</p>
           )}
           <div className="mt-5 border-t border-white/10 pt-5">
-            <p className="text-xs uppercase tracking-wide text-on-panel-dim">Transfer to</p>
+            <p className="text-xs uppercase tracking-wide text-on-panel-dim">
+              {hasPersonalAccount ? "Your personal account" : "Transfer to"}
+            </p>
             <p className="mt-1 font-mono text-2xl font-bold tracking-wide text-on-panel">
-              {groupDigits(collective.bank_account_number)}
+              {groupDigits(payToNumber)}
             </p>
             <p className="mt-1 text-sm text-on-panel-dim">
-              {collective.bank_name} · {collective.name}
+              {payToBank} · {me.name}
             </p>
             <div className="mt-3 flex justify-center">
-              <CopyButton text={collective.bank_account_number} label="Copy account number" />
+              <CopyButton text={payToNumber} label="Copy account number" />
             </div>
           </div>
         </div>

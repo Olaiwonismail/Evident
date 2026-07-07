@@ -1,3 +1,4 @@
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from app.config import settings
@@ -19,6 +20,30 @@ async def get_db():
         yield session
 
 
+# Columns added after the first release. create_all never ALTERs existing
+# tables, so patch them in by hand — idempotently, on every boot.
+_ADDED_COLUMNS = [
+    ("members", "bank_account_number", "VARCHAR"),
+    ("members", "bank_name", "VARCHAR"),
+    ("members", "virtual_account_id", "VARCHAR"),
+]
+
+
+async def _ensure_columns(conn):
+    for table, column, coltype in _ADDED_COLUMNS:
+        try:
+            await conn.execute(
+                text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {coltype}")
+            )
+        except Exception:
+            # SQLite has no IF NOT EXISTS for ADD COLUMN — try plain, ignore dup
+            try:
+                await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"))
+            except Exception:
+                pass  # column already exists
+
+
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await _ensure_columns(conn)

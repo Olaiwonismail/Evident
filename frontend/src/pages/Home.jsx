@@ -25,6 +25,11 @@ export default function Home() {
   if (ledger.isLoading) return <Spinner />;
   const { balance, entries = [] } = ledger.data || {};
   const pending = (expenses.data || []).filter((e) => e.status === "pending");
+  // a logged-in member sees their own dedicated pay-in account (deterministic
+  // attribution); the public view sees the collective's general account.
+  const payToNumber = me?.bank_account_number || collective.bank_account_number;
+  const payToBank = me?.bank_name || collective.bank_name;
+  const personalAccount = !!me?.bank_account_number;
 
   return (
     <div className="space-y-6">
@@ -55,14 +60,18 @@ export default function Home() {
         </div>
 
         <Card className="flex flex-col justify-center p-6 lg:col-span-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">Pay dues to</p>
-          <p className="mt-2 font-mono text-2xl font-semibold tracking-wide text-ink">
-            {groupDigits(collective.bank_account_number)}
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            {personalAccount ? "Your pay-in account" : "Pay dues to"}
           </p>
-          <p className="mt-1 text-sm text-muted">{collective.bank_name}</p>
+          <p className="mt-2 font-mono text-2xl font-semibold tracking-wide text-ink">
+            {groupDigits(payToNumber)}
+          </p>
+          <p className="mt-1 text-sm text-muted">{payToBank}</p>
           <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
-            <p className="text-xs text-muted">Transfer from any Nigerian bank</p>
-            <CopyButton text={collective.bank_account_number} label="Copy" />
+            <p className="text-xs text-muted">
+              {personalAccount ? "Dues here are credited to you" : "Transfer from any Nigerian bank"}
+            </p>
+            <CopyButton text={payToNumber} label="Copy" />
           </div>
         </Card>
       </div>

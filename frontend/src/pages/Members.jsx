@@ -146,6 +146,18 @@ function InviteMember({ collectiveId, onClose }) {
           Send them this invite link — opening it shows them the collective and lets them accept
           and set up their account.
         </p>
+        {invite.data.bank_account_number && (
+          <div className="mt-3 rounded-xl bg-surface-2 p-3">
+            <p className="text-xs text-muted">Their dedicated pay-in account</p>
+            <p className="mt-0.5 font-mono text-sm font-semibold text-ink">
+              {invite.data.bank_account_number}
+              {invite.data.bank_name ? ` · ${invite.data.bank_name}` : ""}
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted">
+              Dues they transfer here are credited to them automatically.
+            </p>
+          </div>
+        )}
         <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-line p-3">
           <p className="truncate font-mono text-xs text-muted">{link}</p>
           <CopyButton text={link} />

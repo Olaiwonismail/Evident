@@ -116,6 +116,20 @@ async def create_virtual_account(collective_id: str, collective_name: str, callb
     return data["data"]
 
 
+async def create_member_virtual_account(
+    member_id: str, member_name: str, collective_name: str, callback_url: str
+) -> dict:
+    """A dedicated pay-in account for a single member. accountRef is prefixed so
+    the webhook can tell a member account apart from a collective account."""
+    data = await _post("/v1/accounts/virtual", {
+        "accountRef": f"mbr_{member_id}",
+        "accountName": f"{member_name} - {collective_name}"[:50],
+        "currency": "NGN",
+        "callbackUrl": callback_url,
+    })
+    return data["data"]
+
+
 async def fetch_virtual_account(account_ref: str) -> dict:
     data = await _get(f"/v1/accounts/virtual/{account_ref}")
     return data["data"]

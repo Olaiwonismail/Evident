@@ -20,6 +20,23 @@ def _extract_nuban(va: dict) -> str | None:
     return va.get("bankAccountNumber") or va.get("accountNumber") or va.get("bankAccountNo")
 
 
+async def _provision_member_account(member: Member, collective_name: str) -> None:
+    """Give a member their own dedicated pay-in account. Best-effort: if Nomba
+    fails, the member is still usable and the account can be backfilled later."""
+    callback_url = f"{settings.app_base_url}/webhooks/nomba"
+    try:
+        va = await nomba_client.create_member_virtual_account(
+            member.id, member.name, collective_name, callback_url
+        )
+        if not _extract_nuban(va):
+            va = await nomba_client.fetch_virtual_account(f"mbr_{member.id}")
+        member.bank_account_number = _extract_nuban(va)
+        member.bank_name = va.get("bankName")
+        member.virtual_account_id = va.get("accountId") or va.get("walletId") or _extract_nuban(va)
+    except Exception:
+        logger.warning("Member VA provisioning failed for %s", member.id, exc_info=True)
+
+
 class CreateCollectiveRequest(BaseModel):
     name: str
     purpose: str
@@ -86,6 +103,9 @@ async def create_collective(body: CreateCollectiveRequest, db: AsyncSession = De
         await db.rollback()
         raise HTTPException(status_code=502, detail=f"Nomba virtual account creation failed: {exc}")
 
+    # the organizer is also a member who pays dues — give them their own account
+    await _provision_member_account(organizer, collective.name)
+
     await db.commit()
     return {
         "id": collective.id,
@@ -121,7 +141,8 @@ async def get_collective(collective_id: str, db: AsyncSession = Depends(get_db))
 @router.post("/{collective_id}/members")
 async def invite_member(collective_id: str, body: InviteMemberRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Collective).where(Collective.id == collective_id))
-    if not result.scalar_one_or_none():
+    collective = result.scalar_one_or_none()
+    if not collective:
         raise HTTPException(status_code=404, detail="Collective not found")
 
     member = Member(
@@ -132,8 +153,18 @@ async def invite_member(collective_id: str, body: InviteMemberRequest, db: Async
         role=body.role,
     )
     db.add(member)
+    await db.flush()  # assign member.id before provisioning its account
+
+    await _provision_member_account(member, collective.name)
+
     await db.commit()
-    return {"id": member.id, "name": member.name, "role": member.role}
+    return {
+        "id": member.id,
+        "name": member.name,
+        "role": member.role,
+        "bank_account_number": member.bank_account_number,
+        "bank_name": member.bank_name,
+    }
 
 
 @router.get("/{collective_id}/members")
