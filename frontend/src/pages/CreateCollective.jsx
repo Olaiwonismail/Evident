@@ -3,8 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { setSessionMember } from "../lib/session.js";
+import { Check, PartyPopper } from "lucide-react";
 import { groupDigits } from "../lib/format.js";
-import { Card, Button, Input, Select, ErrorNote, CopyButton } from "../components/ui.jsx";
+import { Card, Button, Input, Select, ErrorNote, CopyButton, IconChip } from "../components/ui.jsx";
 import PublicShell from "../components/PublicShell.jsx";
 
 // Three steps: group details → light identity check on the organizer →
@@ -47,31 +48,31 @@ export default function CreateCollective() {
       <PublicShell>
         <Card className="mx-auto max-w-xl p-8">
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-2xl">
-              🎉
+            <div className="mb-3 flex justify-center">
+              <IconChip icon={PartyPopper} tone="pos" size="lg" />
             </div>
-            <h2 className="text-xl font-bold">{c.name} is live</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <h2 className="text-xl font-bold text-ink">{c.name} is live</h2>
+            <p className="mt-1 text-sm text-muted">
               Members pay dues straight into this dedicated account — every transfer lands on the
               public ledger automatically.
             </p>
           </div>
 
-          <div className="rounded-2xl bg-slate-900 p-6 text-center text-white">
-            <p className="text-xs uppercase tracking-wider text-slate-400">Pay dues to</p>
-            <p className="mt-2 font-mono text-3xl font-bold tracking-widest">
+          <div className="rounded-2xl bg-panel p-6 text-center">
+            <p className="text-xs uppercase tracking-wide text-on-panel-dim">Pay dues to</p>
+            <p className="mt-2 font-mono text-3xl font-bold tracking-wide text-on-panel">
               {groupDigits(c.bank_account_number)}
             </p>
             <div className="mt-3 flex justify-center">
               <CopyButton text={c.bank_account_number} label="Copy number" />
             </div>
-            <p className="mt-1 text-sm text-slate-300">{c.bank_name}</p>
+            <p className="mt-1 text-sm text-on-panel-dim">{c.bank_name}</p>
           </div>
 
-          <div className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
+          <div className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-line p-3">
             <div className="min-w-0">
-              <p className="text-sm font-medium">Public ledger link — share with everyone</p>
-              <p className="truncate text-xs text-slate-400">{publicLink}</p>
+              <p className="text-sm font-medium text-ink">Public ledger link — share with everyone</p>
+              <p className="truncate font-mono text-xs text-muted">{publicLink}</p>
             </div>
             <CopyButton text={publicLink} />
           </div>
@@ -94,8 +95,8 @@ export default function CreateCollective() {
 
         {step === 1 && (
           <Card className="p-8">
-            <h1 className="mb-1 text-lg font-bold">Set up your collective</h1>
-            <p className="mb-6 text-sm text-slate-500">
+            <h1 className="mb-1 text-lg font-bold text-ink">Set up your collective</h1>
+            <p className="mb-6 text-sm text-muted">
               Name the group, state its purpose, and set the dues. This is what members will see.
             </p>
             <form
@@ -135,8 +136,8 @@ export default function CreateCollective() {
                 </Select>
               </div>
 
-              <hr className="border-slate-100" />
-              <p className="text-sm font-semibold text-slate-700">You (the organizer)</p>
+              <hr className="border-line" />
+              <p className="text-sm font-semibold text-ink">You (the organizer)</p>
               <Input label="Your name" value={form.organizer_name} onChange={set("organizer_name")} required />
               <div className="grid grid-cols-2 gap-4">
                 <Input
@@ -154,7 +155,7 @@ export default function CreateCollective() {
                 />
               </div>
               <Button type="submit" className="w-full">
-                Continue to identity check →
+                Continue to identity check
               </Button>
             </form>
           </Card>
@@ -162,8 +163,8 @@ export default function CreateCollective() {
 
         {step === 2 && (
           <Card className="p-8">
-            <h1 className="mb-1 text-lg font-bold">Verify your identity</h1>
-            <p className="mb-6 text-sm text-slate-500">
+            <h1 className="mb-1 text-lg font-bold text-ink">Verify your identity</h1>
+            <p className="mb-6 text-sm text-muted">
               A light check on you as the organizer — the collective's bank account inherits
               verification underneath, so this stays quick.
             </p>
@@ -189,14 +190,14 @@ export default function CreateCollective() {
                 required
               />
               {!identity.isSuccess && (
-                <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                <p className="rounded-xl bg-warn-soft px-3 py-2 text-xs text-warn-ink">
                   MVP: verification is instant — any 11 digits pass. Manual review backs it up in
                   production.
                 </p>
               )}
               {identity.isSuccess && (
-                <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
-                  ✓ Identity verified — you're good to go.
+                <p className="flex items-center gap-1.5 rounded-xl bg-pos-soft px-3 py-2 text-sm font-medium text-pos-ink">
+                  <Check size={15} strokeWidth={2.25} /> Identity verified — you're good to go.
                 </p>
               )}
               <ErrorNote error={identity.error || create.error} />
@@ -218,7 +219,7 @@ export default function CreateCollective() {
                   type="button"
                   onClick={() => create.mutate()}
                   disabled={create.isPending}
-                  className="w-full text-center text-xs text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
+                  className="w-full text-center text-xs text-muted underline-offset-2 hover:text-ink hover:underline"
                 >
                   Can't verify right now? Continue — we'll review manually.
                 </button>
@@ -226,7 +227,7 @@ export default function CreateCollective() {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="w-full text-center text-xs text-slate-400 hover:text-slate-600"
+                className="w-full text-center text-xs text-muted hover:text-ink"
               >
                 ← Back to details
               </button>
@@ -234,9 +235,9 @@ export default function CreateCollective() {
           </Card>
         )}
 
-        <p className="mt-6 text-center text-xs text-slate-400">
+        <p className="mt-6 text-center text-xs text-muted">
           Already in a collective?{" "}
-          <Link to="/login" className="font-medium text-emerald-600 hover:underline">
+          <Link to="/login" className="font-medium text-brand-ink hover:underline">
             Log in
           </Link>
         </p>
@@ -255,24 +256,22 @@ function StepTracker({ step }) {
         return (
           <li key={label} className="flex items-center gap-2">
             <span
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+              className={`flex h-6 w-6 items-center justify-center rounded-full font-mono text-xs font-bold ${
                 state === "done"
-                  ? "bg-emerald-600 text-white"
+                  ? "bg-brand text-on-brand"
                   : state === "active"
-                    ? "bg-emerald-100 text-emerald-700 ring-2 ring-emerald-600"
-                    : "bg-slate-100 text-slate-400"
+                    ? "bg-brand-soft text-brand-ink ring-2 ring-brand"
+                    : "bg-surface-2 text-faint"
               }`}
             >
-              {state === "done" ? "✓" : n}
+              {state === "done" ? <Check size={13} strokeWidth={2.5} /> : n}
             </span>
             <span
-              className={`text-xs font-medium ${
-                state === "active" ? "text-slate-800" : "text-slate-400"
-              }`}
+              className={`text-xs font-medium ${state === "active" ? "text-ink" : "text-muted"}`}
             >
               {label}
             </span>
-            {n < steps.length && <span className="h-px w-6 bg-slate-200" />}
+            {n < steps.length && <span className="h-px w-6 bg-line-strong" />}
           </li>
         );
       })}

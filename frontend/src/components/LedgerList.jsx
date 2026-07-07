@@ -1,26 +1,37 @@
 import { Link, useParams } from "react-router-dom";
+import { ArrowDownLeft, ArrowUpRight, Undo2, Ban, Circle, ScrollText } from "lucide-react";
 import { naira, formatTime } from "../lib/format.js";
-import { EmptyState, StatusBadge } from "./ui.jsx";
+import { EmptyState, StatusBadge, IconChip } from "./ui.jsx";
 
-const entryIcon = {
-  contribution: ["🟢", "text-emerald-600"],
-  expense: ["🔴", "text-red-600"],
-  expense_failed: ["↩️", "text-blue-600"],
-  expense_refunded: ["↩️", "text-blue-600"],
-  expense_rejected: ["🚫", "text-slate-500"],
+// icon + tone per ledger entry type. Money direction reads instantly:
+// down-left = in, up-right = out, undo = reversed, ban = rejected.
+const entryStyle = {
+  contribution: [ArrowDownLeft, "pos"],
+  expense: [ArrowUpRight, "neg"],
+  expense_failed: [Undo2, "info"],
+  expense_refunded: [Undo2, "info"],
+  expense_rejected: [Ban, "neutral"],
+};
+
+const amountColor = {
+  contribution: "text-pos-ink",
+  expense: "text-neg-ink",
+  expense_failed: "text-info-ink",
+  expense_refunded: "text-info-ink",
 };
 
 // One ledger row. Rejected requests carry no money — they show a status badge
 // instead of a figure, but they stay on the record.
 function Row({ entry }) {
   const { collectiveId } = useParams();
-  const [icon, amountColor] = entryIcon[entry.type] || ["⚪", "text-slate-600"];
+  const [Icon, tone] = entryStyle[entry.type] || [Circle, "neutral"];
+
   const body = (
     <>
-      <span className="text-lg">{icon}</span>
+      <IconChip icon={Icon} tone={tone} size="sm" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{entry.description}</p>
-        <p className="truncate text-xs text-slate-400">
+        <p className="truncate text-sm font-medium text-ink">{entry.description}</p>
+        <p className="truncate text-xs text-muted">
           {entry.actor_name} · {formatTime(entry.timestamp)}
         </p>
       </div>
@@ -29,13 +40,11 @@ function Row({ entry }) {
           <StatusBadge status="rejected" />
         ) : (
           <>
-            <p className={`text-sm font-bold tabular-nums ${amountColor}`}>
-              {entry.amount >= 0 ? "+" : ""}
-              {naira(entry.amount)}
+            <p className={`font-mono text-sm font-semibold tabular-nums ${amountColor[entry.type] || "text-ink"}`}>
+              {entry.amount >= 0 ? "+" : "−"}
+              {naira(Math.abs(entry.amount))}
             </p>
-            <p className="text-xs tabular-nums text-slate-400">
-              bal {naira(entry.balance_after)}
-            </p>
+            <p className="font-mono text-xs tabular-nums text-faint">bal {naira(entry.balance_after)}</p>
           </>
         )}
       </div>
@@ -46,20 +55,20 @@ function Row({ entry }) {
     return (
       <Link
         to={`/c/${collectiveId}/expenses/${entry.expense_id}`}
-        className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-slate-50"
+        className="flex items-center gap-3.5 px-5 py-3.5 transition-colors hover:bg-surface-2 sm:px-6"
       >
         {body}
       </Link>
     );
   }
-  return <div className="flex items-center gap-4 px-6 py-4">{body}</div>;
+  return <div className="flex items-center gap-3.5 px-5 py-3.5 sm:px-6">{body}</div>;
 }
 
 export default function LedgerList({ entries, limit }) {
   if (!entries.length) {
     return (
       <EmptyState
-        icon="📖"
+        icon={ScrollText}
         title="No transactions yet"
         subtitle="The first transfer to the collective's account will appear here automatically."
       />
@@ -67,7 +76,7 @@ export default function LedgerList({ entries, limit }) {
   }
   const shown = limit ? entries.slice(0, limit) : entries;
   return (
-    <ul className="divide-y divide-slate-100">
+    <ul className="divide-y divide-line">
       {shown.map((e) => (
         <li key={e.id}>
           <Row entry={e} />

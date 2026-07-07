@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ShieldCheck, Target } from "lucide-react";
 import { api } from "../api.js";
 import { naira, formatTime } from "../lib/format.js";
 import { Card, CardHeader, Button, Spinner, EmptyState, ErrorNote, Badge } from "../components/ui.jsx";
@@ -32,7 +33,8 @@ export default function NeedsReview() {
     return (
       <Card>
         <EmptyState
-          icon="🛡️"
+          icon={ShieldCheck}
+          tone="info"
           title="Committee only"
           subtitle="Only the organizer and committee can attribute unmatched payments."
         />
@@ -52,12 +54,13 @@ export default function NeedsReview() {
         <Spinner />
       ) : items.length === 0 ? (
         <EmptyState
-          icon="🎯"
+          icon={Target}
+          tone="pos"
           title="All clear"
           subtitle="Every transfer has been matched to a member."
         />
       ) : (
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-line">
           {items.map((u) => (
             <ReviewRow key={u.id} item={u} members={members} resolve={resolve} />
           ))}
@@ -75,28 +78,28 @@ function ReviewRow({ item, members, resolve }) {
   const busy = resolve.isPending && resolve.variables?.unmatchedId === item.id;
 
   return (
-    <li className="px-6 py-4">
+    <li className="px-5 py-4 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium">
+          <p className="text-sm font-medium text-ink">
             {item.sender_name || "Unknown sender"}{" "}
-            <span className="text-slate-400">
+            <span className="font-mono text-muted">
               ({item.sender_account || "no account"}
               {item.sender_bank ? ` · ${item.sender_bank}` : ""})
             </span>
           </p>
-          <p className="text-xs text-slate-400">{formatTime(item.timestamp)}</p>
+          <p className="font-mono text-xs text-muted">{formatTime(item.timestamp)}</p>
         </div>
         <div className="flex items-center gap-3">
-          <p className="text-sm font-bold tabular-nums">{naira(item.amount)}</p>
-          <Badge tone="purple">needs review</Badge>
+          <p className="font-mono text-sm font-semibold tabular-nums text-ink">{naira(item.amount)}</p>
+          <Badge tone="review">needs review</Badge>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <select
           value={memberId}
           onChange={(e) => setMemberId(e.target.value)}
-          className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500"
+          className="min-h-11 flex-1 rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
         >
           <option value="">Who sent this payment?</option>
           {members.map((m) => (

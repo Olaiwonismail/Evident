@@ -1,5 +1,6 @@
 import { Link, useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { Clock, ArrowRight } from "lucide-react";
 import { api } from "../api.js";
 import { naira, groupDigits } from "../lib/format.js";
 import { Card, CardHeader, Button, Spinner, CopyButton, StatusBadge } from "../components/ui.jsx";
@@ -27,45 +28,47 @@ export default function Home() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card className="flex flex-col justify-between p-6">
+      {/* Balance + account: the balance leads as a dark "vault" panel; the
+          account number sits beside it, no side-stripe gimmick. */}
+      <div className="grid gap-4 lg:grid-cols-5">
+        <div className="flex flex-col justify-between rounded-2xl bg-panel p-6 lg:col-span-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+            <p className="text-xs font-medium uppercase tracking-wide text-on-panel-dim">
               Collective balance
             </p>
-            <p className="mt-2 text-4xl font-extrabold tracking-tight">{naira(balance ?? 0)}</p>
-            <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
+            <p className="mt-2 font-mono text-4xl font-bold tracking-tight text-on-panel sm:text-5xl">
+              {naira(balance ?? 0)}
+            </p>
+            <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-on-panel-dim">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pos opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-pos" />
               </span>
               Live — updates automatically
             </p>
           </div>
           {me && (
-            <Link to={`/c/${collectiveId}/pay`} className="mt-5 block">
-              <Button className="w-full">Pay my dues</Button>
+            <Link to={`/c/${collectiveId}/pay`} className="mt-6">
+              <Button className="w-full sm:w-auto">Pay my dues</Button>
             </Link>
           )}
-        </Card>
+        </div>
 
-        <Card className="border-l-4 border-l-emerald-500 p-6">
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Pay dues to</p>
-          <p className="mt-2 font-mono text-3xl font-bold tracking-wider text-slate-900">
+        <Card className="flex flex-col justify-center p-6 lg:col-span-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Pay dues to</p>
+          <p className="mt-2 font-mono text-2xl font-semibold tracking-wide text-ink">
             {groupDigits(collective.bank_account_number)}
           </p>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <p className="text-sm text-slate-500">{collective.bank_name}</p>
-            <CopyButton text={collective.bank_account_number} label="Copy number" />
+          <p className="mt-1 text-sm text-muted">{collective.bank_name}</p>
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
+            <p className="text-xs text-muted">Transfer from any Nigerian bank</p>
+            <CopyButton text={collective.bank_account_number} label="Copy" />
           </div>
-          <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-400">
-            Transfer from any Nigerian bank — it lands on the public ledger automatically.
-          </p>
         </Card>
       </div>
 
       {pending.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50/50">
+        <Card>
           <CardHeader
             title={`Pending approval (${pending.length})`}
             subtitle={
@@ -76,24 +79,29 @@ export default function Home() {
             action={
               isCommittee ? (
                 <Link to={`/c/${collectiveId}/approvals`}>
-                  <Button>Review now</Button>
+                  <Button className="min-h-9 px-3 text-xs">Review now</Button>
                 </Link>
               ) : null
             }
           />
-          <ul className="divide-y divide-amber-100">
+          <ul className="divide-y divide-line">
             {pending.map((e) => (
               <li key={e.id}>
                 <Link
                   to={`/c/${collectiveId}/expenses/${e.id}`}
-                  className="flex items-center justify-between gap-4 px-6 py-3 transition-colors hover:bg-amber-50"
+                  className="flex items-center justify-between gap-4 px-5 py-3 transition-colors hover:bg-surface-2 sm:px-6"
                 >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{e.reason}</p>
-                    <p className="text-xs text-slate-400">requested by {e.requested_by_name}</p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warn-soft text-warn-ink">
+                      <Clock size={16} strokeWidth={1.75} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-ink">{e.reason}</p>
+                      <p className="text-xs text-muted">requested by {e.requested_by_name}</p>
+                    </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
-                    <p className="text-sm font-bold tabular-nums">{naira(e.amount)}</p>
+                    <p className="font-mono text-sm font-semibold tabular-nums text-ink">{naira(e.amount)}</p>
                     <StatusBadge status={e.status} />
                   </div>
                 </Link>
@@ -110,9 +118,10 @@ export default function Home() {
           action={
             <Link
               to={`/c/${collectiveId}/ledger`}
-              className="text-sm font-semibold text-emerald-600 hover:underline"
+              className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-brand-ink hover:bg-brand-soft"
             >
-              Full ledger →
+              Full ledger
+              <ArrowRight size={15} strokeWidth={2} />
             </Link>
           }
         />

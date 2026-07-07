@@ -29,8 +29,8 @@ export default function Auth() {
     <PublicShell>
       <Card className="mx-auto max-w-md p-8">
         <div className="mb-6 text-center">
-          <h1 className="text-xl font-bold">Welcome to Evident</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-xl font-bold text-ink">Welcome to Evident</h1>
+          <p className="mt-1 text-sm text-muted">
             Log in or create your account — we'll text you a one-time code.
           </p>
         </div>
@@ -43,14 +43,14 @@ export default function Auth() {
               send.mutate();
             }}
           >
-            <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
+            <div className="grid grid-cols-2 gap-1 rounded-xl bg-surface-2 p-1">
               {["phone", "email"].map((ch) => (
                 <button
                   key={ch}
                   type="button"
                   onClick={() => setChannel(ch)}
-                  className={`rounded-lg py-1.5 text-sm font-medium capitalize transition-colors ${
-                    channel === ch ? "bg-white shadow-sm" : "text-slate-500"
+                  className={`min-h-9 rounded-lg text-sm font-medium capitalize transition-colors ${
+                    channel === ch ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"
                   }`}
                 >
                   {ch}
@@ -79,8 +79,8 @@ export default function Auth() {
               verify.mutate();
             }}
           >
-            <p className="text-center text-sm text-slate-500">
-              Enter the 6-digit code sent to <span className="font-medium text-slate-700">{contact}</span>
+            <p className="text-center text-sm text-muted">
+              Enter the 6-digit code sent to <span className="font-medium text-ink">{contact}</span>
             </p>
             <Input
               label="One-time code"
@@ -92,7 +92,7 @@ export default function Auth() {
               required
               autoFocus
             />
-            <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            <p className="rounded-xl bg-warn-soft px-3 py-2 text-xs text-warn-ink">
               MVP preview: any 6-digit code works — it logs you into the demo collective as the
               organizer. Real accounts use the personal link from your invite.
             </p>
@@ -106,16 +106,16 @@ export default function Auth() {
                 send.reset();
                 setCode("");
               }}
-              className="w-full text-center text-xs text-slate-400 hover:text-slate-600"
+              className="w-full text-center text-xs text-muted hover:text-ink"
             >
               Use a different {channel === "phone" ? "number" : "email"}
             </button>
           </form>
         )}
 
-        <p className="mt-6 border-t border-slate-100 pt-4 text-center text-xs text-slate-400">
+        <p className="mt-6 border-t border-line pt-4 text-center text-xs text-muted">
           Starting a new group?{" "}
-          <Link to="/create" className="font-medium text-emerald-600 hover:underline">
+          <Link to="/create" className="font-medium text-brand-ink hover:underline">
             Create a collective
           </Link>
         </p>

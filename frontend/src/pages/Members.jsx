@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Users, PartyPopper } from "lucide-react";
 import { api } from "../api.js";
 import { naira } from "../lib/format.js";
 import {
-  Card, CardHeader, Button, Input, Select, EmptyState, Badge, ErrorNote, CopyButton,
+  Card, CardHeader, Button, Input, Select, EmptyState, Badge, ErrorNote, CopyButton, IconChip,
 } from "../components/ui.jsx";
 
-const roleTone = { organizer: "purple", committee: "blue", member: "slate" };
+const roleTone = { organizer: "review", committee: "info", member: "neutral" };
 
 // Who's in, who holds committee power, and (for the organizer) the levers to
 // change that: invites and committee assignment.
@@ -47,40 +48,43 @@ export default function Members() {
           }
           action={
             isOrganizer && !inviting ? (
-              <Button onClick={() => setInviting(true)}>+ Invite</Button>
+              <Button className="min-h-9 px-3 text-xs" onClick={() => setInviting(true)}>
+                <Plus size={15} strokeWidth={2.25} />
+                Invite
+              </Button>
             ) : null
           }
         />
         {members.length === 0 ? (
-          <EmptyState icon="👥" title="No members yet" />
+          <EmptyState icon={Users} title="No members yet" />
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-line">
             {members.map((m, i) => {
               const paid = contributionQueries[i]?.data?.total_paid ?? null;
               const owes = dues && paid !== null ? Math.max(0, dues - paid) : null;
               return (
-                <li key={m.id} className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+                <li key={m.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-6">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">{m.name}</p>
-                    <p className="text-xs text-slate-400">{m.phone || m.email || "no contact"}</p>
+                    <p className="text-sm font-medium text-ink">{m.name}</p>
+                    <p className="text-xs text-muted">{m.phone || m.email || "no contact"}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     {paid !== null && (
                       <div className="text-right">
-                        <p className="text-sm font-semibold text-emerald-600">{naira(paid)} paid</p>
+                        <p className="font-mono text-sm font-semibold tabular-nums text-pos-ink">{naira(paid)} paid</p>
                         {owes > 0 && (
-                          <p className="text-xs font-medium text-amber-600">owes {naira(owes)}</p>
+                          <p className="text-xs font-medium text-warn-ink">owes {naira(owes)}</p>
                         )}
                         {dues && owes === 0 && (
-                          <p className="text-xs font-medium text-emerald-600">up to date ✓</p>
+                          <p className="text-xs font-medium text-pos-ink">up to date</p>
                         )}
                       </div>
                     )}
-                    <Badge tone={roleTone[m.role] || "slate"}>{m.role}</Badge>
+                    <Badge tone={roleTone[m.role] || "neutral"}>{m.role}</Badge>
                     {isOrganizer && m.role !== "organizer" && (
                       <Button
                         variant="secondary"
-                        className="!px-3 !py-1.5 !text-xs"
+                        className="min-h-9 px-3 text-xs"
                         disabled={setRole.isPending}
                         onClick={() =>
                           setRole.mutate({
@@ -104,7 +108,7 @@ export default function Members() {
       </Card>
 
       {isOrganizer && (
-        <p className="px-2 text-xs text-slate-400">
+        <p className="px-2 text-xs text-muted">
           Committee members can approve or reject expenses — every decision carries their name on
           the public ledger. Assign at least one person besides yourself.
         </p>
@@ -132,15 +136,18 @@ function InviteMember({ collectiveId, onClose }) {
     const link = `${window.location.origin}/join/${collectiveId}/${invite.data.id}`;
     return (
       <Card className="p-6">
-        <p className="text-sm font-semibold">
-          {invite.data.name} invited as {invite.data.role} 🎉
-        </p>
-        <p className="mt-1 text-xs text-slate-400">
+        <div className="flex items-center gap-2">
+          <IconChip icon={PartyPopper} tone="pos" size="sm" />
+          <p className="text-sm font-semibold text-ink">
+            {invite.data.name} invited as {invite.data.role}
+          </p>
+        </div>
+        <p className="mt-2 text-xs text-muted">
           Send them this invite link — opening it shows them the collective and lets them accept
           and set up their account.
         </p>
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
-          <p className="truncate text-xs text-slate-500">{link}</p>
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-line p-3">
+          <p className="truncate font-mono text-xs text-muted">{link}</p>
           <CopyButton text={link} />
         </div>
         <div className="mt-4 flex gap-3">
@@ -163,7 +170,7 @@ function InviteMember({ collectiveId, onClose }) {
 
   return (
     <Card className="p-6">
-      <h2 className="mb-4 font-semibold">Invite a member</h2>
+      <h2 className="mb-4 font-semibold text-ink">Invite a member</h2>
       <form
         className="space-y-4"
         onSubmit={(e) => {

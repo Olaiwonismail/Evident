@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, KeyRound } from "lucide-react";
 import { api, isDemoCollective } from "../api.js";
 import { naira, groupDigits } from "../lib/format.js";
-import { Card, Button, CopyButton, EmptyState } from "../components/ui.jsx";
+import { Card, Button, CopyButton, EmptyState, IconChip } from "../components/ui.jsx";
 
 // Turns intent into an actual payment: show exactly where to send money and
 // how much, then confirm the moment it lands so the member never wonders
@@ -42,7 +43,7 @@ export default function PayDues() {
     return (
       <Card>
         <EmptyState
-          icon="🔑"
+          icon={KeyRound}
           title="Open your personal link to pay dues"
           subtitle="We need to know who you are so your transfer is credited to your record."
         />
@@ -68,11 +69,11 @@ export default function PayDues() {
   if (phase === "confirmed") {
     return (
       <Card className="mx-auto max-w-md p-8 text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl">
-          ✅
+        <div className="mb-4 flex justify-center">
+          <IconChip icon={CheckCircle2} tone="pos" size="lg" />
         </div>
-        <h1 className="text-xl font-bold">{naira(received.amount)} received</h1>
-        <p className="mt-2 text-sm text-slate-500">
+        <h1 className="font-mono text-2xl font-bold text-ink">{naira(received.amount)} received</h1>
+        <p className="mt-2 text-sm text-muted">
           Your payment landed and is already on the public ledger — logged permanently under your
           name, {me.name}.
         </p>
@@ -81,7 +82,7 @@ export default function PayDues() {
             <Button variant="secondary" className="w-full">See it on the ledger</Button>
           </Link>
           <Link to={`/c/${collectiveId}/me`}>
-            <Button className="w-full">My record →</Button>
+            <Button className="w-full">My record</Button>
           </Link>
         </div>
       </Card>
@@ -90,29 +91,29 @@ export default function PayDues() {
 
   return (
     <div className="mx-auto max-w-md space-y-4">
-      <Card className="p-8">
+      <Card className="p-6 sm:p-8">
         <div className="mb-6 text-center">
-          <h1 className="text-lg font-bold">Pay your dues</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-lg font-bold text-ink">Pay your dues</h1>
+          <p className="mt-1 text-sm text-muted">
             Transfer from any Nigerian bank app. Send from the account registered to your phone
             number ({me.phone || "your registered number"}) so it's matched to you automatically.
           </p>
         </div>
 
-        <div className="rounded-2xl bg-slate-900 p-6 text-center text-white">
-          <p className="text-xs uppercase tracking-wider text-slate-400">Amount expected</p>
-          <p className="mt-1 text-3xl font-extrabold tracking-tight">
+        <div className="rounded-2xl bg-panel p-6 text-center">
+          <p className="text-xs uppercase tracking-wide text-on-panel-dim">Amount expected</p>
+          <p className="mt-1 font-mono text-3xl font-bold tracking-tight text-on-panel">
             {dues ? naira(dues) : "Any amount"}
           </p>
           {collective.dues_frequency && dues && (
-            <p className="mt-0.5 text-xs text-slate-400">{collective.dues_frequency} dues</p>
+            <p className="mt-0.5 text-xs text-on-panel-dim">{collective.dues_frequency} dues</p>
           )}
           <div className="mt-5 border-t border-white/10 pt-5">
-            <p className="text-xs uppercase tracking-wider text-slate-400">Transfer to</p>
-            <p className="mt-1 font-mono text-2xl font-bold tracking-widest">
+            <p className="text-xs uppercase tracking-wide text-on-panel-dim">Transfer to</p>
+            <p className="mt-1 font-mono text-2xl font-bold tracking-wide text-on-panel">
               {groupDigits(collective.bank_account_number)}
             </p>
-            <p className="mt-1 text-sm text-slate-300">
+            <p className="mt-1 text-sm text-on-panel-dim">
               {collective.bank_name} · {collective.name}
             </p>
             <div className="mt-3 flex justify-center">
@@ -126,10 +127,10 @@ export default function PayDues() {
             I've made the transfer
           </Button>
         ) : (
-          <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center">
-            <div className="mx-auto mb-2 h-6 w-6 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-600" />
-            <p className="text-sm font-medium text-emerald-800">Watching for your transfer…</p>
-            <p className="mt-1 text-xs text-emerald-700/70">
+          <div className="mt-6 rounded-xl border border-pos/30 bg-pos-soft p-4 text-center">
+            <div className="mx-auto mb-2 h-6 w-6 animate-spin rounded-full border-2 border-pos/30 border-t-pos" />
+            <p className="text-sm font-medium text-pos-ink">Watching for your transfer…</p>
+            <p className="mt-1 text-xs text-pos-ink/80">
               You'll get a confirmation here the moment it lands. Safe to close — it will still be
               logged.
             </p>
@@ -138,7 +139,7 @@ export default function PayDues() {
       </Card>
 
       {isDemoCollective(collectiveId) && phase === "waiting" && (
-        <p className="text-center text-xs text-amber-600">
+        <p className="text-center text-xs text-warn-ink">
           Demo: a simulated transfer will land in a few seconds.
         </p>
       )}

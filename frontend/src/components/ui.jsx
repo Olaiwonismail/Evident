@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { Copy, Check } from "lucide-react";
 
 export function Card({ children, className = "" }) {
   return (
-    <div className={`rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}>
+    <div className={`rounded-2xl border border-line bg-surface shadow-sm shadow-black/[0.03] ${className}`}>
       {children}
     </div>
   );
@@ -10,64 +11,91 @@ export function Card({ children, className = "" }) {
 
 export function CardHeader({ title, subtitle, action }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-6 py-4">
+    <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4 sm:px-6">
       <div className="min-w-0">
-        <h2 className="font-semibold">{title}</h2>
-        {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
+        <h2 className="font-semibold text-ink">{title}</h2>
+        {subtitle && <p className="mt-1 max-w-prose text-[13px] leading-snug text-muted">{subtitle}</p>}
       </div>
-      {action}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }
 
+// tone → [soft background, ink text]. Money direction (pos/neg) is deliberately
+// separate from the brand so "green" never means "brand", only "money in".
 const badgeTones = {
-  green: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  amber: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  red: "bg-red-50 text-red-700 ring-red-600/20",
-  blue: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  slate: "bg-slate-100 text-slate-600 ring-slate-500/20",
-  purple: "bg-purple-50 text-purple-700 ring-purple-600/20",
+  brand: "bg-brand-soft text-brand-ink",
+  pos: "bg-pos-soft text-pos-ink",
+  neg: "bg-neg-soft text-neg-ink",
+  warn: "bg-warn-soft text-warn-ink",
+  info: "bg-info-soft text-info-ink",
+  review: "bg-review-soft text-review-ink",
+  neutral: "bg-surface-2 text-muted",
 };
 
-export function Badge({ tone = "slate", children }) {
+export function Badge({ tone = "neutral", children, className = "" }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${badgeTones[tone]}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeTones[tone]} ${className}`}
     >
       {children}
     </span>
   );
 }
 
+// [tone, label] for every status the ledger and expenses surface.
 export const statusBadge = {
-  exact: ["green", "paid in full"],
-  partial: ["amber", "partial"],
-  excess: ["blue", "overpaid — credited"],
-  unmatched: ["purple", "needs review"],
-  pending: ["amber", "pending approval"],
-  disbursing: ["blue", "disbursing…"],
-  paid: ["green", "paid"],
-  failed: ["red", "failed"],
-  rejected: ["slate", "rejected"],
-  manual_review: ["purple", "manual review"],
+  exact: ["pos", "paid in full"],
+  partial: ["warn", "partial"],
+  excess: ["info", "overpaid — credited"],
+  unmatched: ["review", "needs review"],
+  pending: ["warn", "pending approval"],
+  disbursing: ["info", "disbursing…"],
+  paid: ["pos", "paid"],
+  failed: ["neg", "failed"],
+  rejected: ["neutral", "rejected"],
+  manual_review: ["review", "manual review"],
 };
 
 export function StatusBadge({ status }) {
-  const [tone, label] = statusBadge[status] || ["slate", status];
+  const [tone, label] = statusBadge[status] || ["neutral", status];
   return <Badge tone={tone}>{label}</Badge>;
 }
 
-export function Button({ children, variant = "primary", className = "", ...props }) {
-  const styles = {
-    primary:
-      "bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-300",
-    secondary:
-      "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 disabled:text-slate-400",
-    danger: "bg-white text-red-600 border border-red-200 hover:bg-red-50",
+// Round tinted icon holder — used in empty states, ledger rows, hero moments.
+export function IconChip({ icon: Icon, tone = "brand", size = "md", className = "" }) {
+  const tones = {
+    brand: "bg-brand-soft text-brand-ink",
+    pos: "bg-pos-soft text-pos-ink",
+    neg: "bg-neg-soft text-neg-ink",
+    warn: "bg-warn-soft text-warn-ink",
+    info: "bg-info-soft text-info-ink",
+    review: "bg-review-soft text-review-ink",
+    neutral: "bg-surface-2 text-muted",
+  };
+  const sizes = {
+    sm: "h-8 w-8 rounded-lg [&>svg]:h-4 [&>svg]:w-4",
+    md: "h-10 w-10 rounded-xl [&>svg]:h-5 [&>svg]:w-5",
+    lg: "h-14 w-14 rounded-2xl [&>svg]:h-6 [&>svg]:w-6",
   };
   return (
+    <span className={`inline-flex shrink-0 items-center justify-center ${tones[tone]} ${sizes[size]} ${className}`}>
+      <Icon strokeWidth={1.75} />
+    </span>
+  );
+}
+
+const buttonVariants = {
+  primary: "bg-brand text-on-brand hover:bg-brand-strong disabled:opacity-50",
+  secondary: "bg-surface text-ink border border-line-strong hover:bg-surface-2 disabled:opacity-50",
+  ghost: "text-brand-ink hover:bg-brand-soft disabled:opacity-50",
+  danger: "bg-surface text-neg-ink border border-line-strong hover:bg-neg-soft disabled:opacity-50",
+};
+
+export function Button({ children, variant = "primary", className = "", ...props }) {
+  return (
     <button
-      className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-1 active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 ${styles[variant]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-[background-color,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-canvas active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 ${buttonVariants[variant]} ${className}`}
       {...props}
     >
       {children}
@@ -75,41 +103,34 @@ export function Button({ children, variant = "primary", className = "", ...props
   );
 }
 
-export function Input({ label, hint, ...props }) {
+const fieldClass =
+  "w-full min-h-11 rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink outline-none transition-colors placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-brand/25";
+
+export function Input({ label, hint, className = "", ...props }) {
   return (
     <label className="block">
-      {label && <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>}
-      <input
-        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-        {...props}
-      />
-      {hint && <span className="mt-1 block text-xs text-slate-500">{hint}</span>}
+      {label && <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>}
+      <input className={`${fieldClass} py-2.5 ${className}`} {...props} />
+      {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
     </label>
   );
 }
 
-export function Textarea({ label, hint, ...props }) {
+export function Textarea({ label, hint, className = "", ...props }) {
   return (
     <label className="block">
-      {label && <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>}
-      <textarea
-        rows={3}
-        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-        {...props}
-      />
-      {hint && <span className="mt-1 block text-xs text-slate-500">{hint}</span>}
+      {label && <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>}
+      <textarea rows={3} className={`${fieldClass} py-2.5 ${className}`} {...props} />
+      {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
     </label>
   );
 }
 
-export function Select({ label, children, ...props }) {
+export function Select({ label, children, className = "", ...props }) {
   return (
     <label className="block">
-      {label && <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>}
-      <select
-        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-        {...props}
-      >
+      {label && <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>}
+      <select className={`${fieldClass} bg-surface py-2.5 ${className}`} {...props}>
         {children}
       </select>
     </label>
@@ -119,19 +140,21 @@ export function Select({ label, children, ...props }) {
 export function Spinner() {
   return (
     <div className="flex justify-center py-10">
-      <div className="h-7 w-7 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600" />
+      <div className="h-7 w-7 animate-spin rounded-full border-2 border-line-strong border-t-brand" />
     </div>
   );
 }
 
-export function EmptyState({ title, subtitle, icon = "🗒️" }) {
+export function EmptyState({ title, subtitle, icon: Icon, tone = "neutral" }) {
   return (
-    <div className="py-12 text-center">
-      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-lg">
-        {icon}
-      </div>
-      <p className="text-sm font-medium text-slate-600">{title}</p>
-      {subtitle && <p className="mx-auto mt-1 max-w-xs text-xs text-slate-400">{subtitle}</p>}
+    <div className="px-6 py-14 text-center">
+      {Icon && (
+        <div className="mb-3 flex justify-center">
+          <IconChip icon={Icon} tone={tone} size="md" />
+        </div>
+      )}
+      <p className="text-sm font-semibold text-ink">{title}</p>
+      {subtitle && <p className="mx-auto mt-1 max-w-xs text-[13px] leading-snug text-muted">{subtitle}</p>}
     </div>
   );
 }
@@ -139,23 +162,27 @@ export function EmptyState({ title, subtitle, icon = "🗒️" }) {
 export function ErrorNote({ error }) {
   if (!error) return null;
   return (
-    <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{String(error.message || error)}</p>
+    <p className="rounded-xl bg-neg-soft px-3 py-2 text-sm text-neg-ink">
+      {String(error.message || error)}
+    </p>
   );
 }
 
-export function CopyButton({ text, label = "Copy" }) {
+export function CopyButton({ text, label = "Copy", variant = "secondary" }) {
   const [copied, setCopied] = useState(false);
   return (
     <Button
-      variant="secondary"
+      variant={variant}
       type="button"
+      className="min-h-9 px-3 text-xs"
       onClick={async () => {
         await navigator.clipboard.writeText(text);
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       }}
     >
-      {copied ? "Copied ✓" : label}
+      {copied ? <Check size={14} strokeWidth={2.25} /> : <Copy size={14} strokeWidth={2} />}
+      {copied ? "Copied" : label}
     </Button>
   );
 }

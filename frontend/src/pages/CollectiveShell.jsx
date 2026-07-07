@@ -5,7 +5,7 @@ import { api, isDemoCollective } from "../api.js";
 import { getSessionMember, setSessionMember } from "../lib/session.js";
 import { Badge, Spinner, CopyButton } from "../components/ui.jsx";
 
-const roleTone = { organizer: "purple", committee: "blue", member: "slate" };
+const roleTone = { organizer: "review", committee: "info", member: "neutral" };
 
 export default function CollectiveShell() {
   const { collectiveId } = useParams();
@@ -61,9 +61,9 @@ export default function CollectiveShell() {
   if (collective.isLoading || members.isLoading) return <Spinner />;
   if (collective.isError)
     return (
-      <div className="py-20 text-center text-sm text-slate-500">
+      <div className="py-20 text-center text-sm text-muted">
         Collective not found.{" "}
-        <Link className="text-emerald-600 underline" to="/">
+        <Link className="text-brand-ink underline" to="/">
           Create one?
         </Link>
       </div>
@@ -93,26 +93,26 @@ export default function CollectiveShell() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur-md">
         <div className="mx-auto max-w-5xl px-4 pt-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <Link to="/" className="text-sm font-extrabold tracking-tight">
-                evident<span className="text-emerald-600">.</span>
+              <Link to="/" className="text-sm font-bold tracking-tight text-ink">
+                evident<span className="text-brand-ink">.</span>
               </Link>
-              <h1 className="mt-1 truncate text-xl font-bold tracking-tight sm:text-2xl">
+              <h1 className="mt-1 truncate text-xl font-bold tracking-tight text-ink sm:text-2xl">
                 {collective.data.name}
               </h1>
-              <p className="mt-0.5 truncate text-sm text-slate-500">{collective.data.purpose}</p>
+              <p className="mt-0.5 truncate text-sm text-muted">{collective.data.purpose}</p>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-2 pt-1">
               {me ? (
                 <div className="text-right">
-                  <p className="text-sm font-medium">{me.name}</p>
-                  <Badge tone={roleTone[role] || "slate"}>{role}</Badge>
+                  <p className="text-sm font-medium text-ink">{me.name}</p>
+                  <Badge tone={roleTone[role] || "neutral"}>{role}</Badge>
                 </div>
               ) : (
-                <Badge tone="slate">public view</Badge>
+                <Badge tone="neutral">public view</Badge>
               )}
               <div className="flex items-center gap-2">
                 {isDemoCollective(collectiveId) && (
@@ -130,8 +130,8 @@ export default function CollectiveShell() {
                 to={t.to}
                 end={t.end}
                 className={({ isActive }) =>
-                  `flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 ${
-                    isActive ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
+                  `flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                    isActive ? "bg-brand text-on-brand" : "text-muted hover:bg-surface-2 hover:text-ink"
                   }`
                 }
               >
@@ -141,7 +141,7 @@ export default function CollectiveShell() {
                     {t.count > 0 && (
                       <span
                         className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${
-                          isActive ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700"
+                          isActive ? "bg-white/20 text-on-brand" : "bg-warn-soft text-warn-ink"
                         }`}
                       >
                         {t.count}
@@ -168,7 +168,7 @@ function RoleSwitcher({ members, me, setMemberId }) {
     <select
       value={me?.id || ""}
       onChange={(e) => setMemberId(e.target.value || null)}
-      className="rounded-xl border border-dashed border-amber-300 bg-amber-50 px-2 py-2 text-xs font-medium text-amber-800 outline-none"
+      className="min-h-9 rounded-xl border border-dashed border-warn bg-warn-soft px-2 text-xs font-medium text-warn-ink outline-none focus-visible:ring-2 focus-visible:ring-brand"
       title="Demo: switch who you're viewing as"
     >
       <option value="">👀 Public view</option>

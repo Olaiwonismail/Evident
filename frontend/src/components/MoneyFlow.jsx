@@ -1,8 +1,9 @@
+import { Users, Landmark, UserCheck, ArrowRight, Undo2 } from "lucide-react";
 import { naira } from "../lib/format.js";
 
 // A glanceable picture of the glass box: dues flow in from members, sit in
 // one visible pool, and only leave to verified recipients via approvals.
-// Numbers are computed from the ledger itself, so the diagram can't lie.
+// Every number is computed from the ledger itself, so the diagram can't lie.
 export default function MoneyFlow({ entries, memberCount, balance }) {
   const totalIn = entries
     .filter((e) => e.type === "contribution")
@@ -15,70 +16,79 @@ export default function MoneyFlow({ entries, memberCount, balance }) {
   const netOut = totalOut - refunded;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+    <div className="rounded-2xl border border-line bg-surface p-5 shadow-sm shadow-black/[0.03] sm:p-6">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-stretch">
         <FlowNode
-          icon="👥"
+          icon={Users}
+          tone="pos"
           title="Members"
           big={`${memberCount}`}
           sub="pay dues from any bank"
         />
-        <FlowArrow amount={totalIn} label="dues in" tone="text-emerald-600" />
+        <FlowArrow amount={totalIn} label="dues in" tone="text-pos-ink" />
         <FlowNode
-          icon="🏦"
+          icon={Landmark}
           title="Collective pool"
           big={naira(balance ?? 0)}
-          sub="held in the open — everyone sees this number"
+          sub="held in the open — everyone sees this"
           highlight
         />
-        <FlowArrow amount={netOut} label="approved payouts" tone="text-red-600" />
+        <FlowArrow amount={netOut} label="approved payouts" tone="text-neg-ink" />
         <FlowNode
-          icon="✅"
+          icon={UserCheck}
+          tone="info"
           title="Verified recipients"
           big={`${payouts.length} payout${payouts.length === 1 ? "" : "s"}`}
-          sub="each with a public reason & approver's name"
+          sub="public reason + approver on each"
         />
       </div>
       {refunded > 0 && (
-        <p className="mt-4 border-t border-slate-100 pt-3 text-center text-xs text-slate-400">
-          ↩️ {naira(refunded)} came back after a failed transfer — money never disappears quietly.
+        <p className="mt-4 flex items-center justify-center gap-1.5 border-t border-line pt-3 text-xs text-muted">
+          <Undo2 size={13} strokeWidth={1.75} />
+          {naira(refunded)} returned after a failed transfer — money never disappears quietly.
         </p>
       )}
     </div>
   );
 }
 
-function FlowNode({ icon, title, big, sub, highlight }) {
+function FlowNode({ icon: Icon, tone = "brand", title, big, sub, highlight }) {
+  if (highlight) {
+    return (
+      <div className="flex flex-1 flex-col items-center rounded-xl bg-panel p-4 text-center">
+        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-on-panel">
+          <Icon size={18} strokeWidth={1.75} />
+        </span>
+        <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-on-panel-dim">{title}</p>
+        <p className="mt-0.5 text-lg font-bold tracking-tight text-on-panel">{big}</p>
+        <p className="mt-0.5 text-[11px] text-on-panel-dim">{sub}</p>
+      </div>
+    );
+  }
+  const toneChip = {
+    pos: "bg-pos-soft text-pos-ink",
+    info: "bg-info-soft text-info-ink",
+    brand: "bg-brand-soft text-brand-ink",
+  };
   return (
-    <div
-      className={`flex-1 rounded-2xl p-4 text-center ${
-        highlight ? "bg-slate-900 text-white" : "border border-slate-200 bg-slate-50"
-      }`}
-    >
-      <p className="text-xl">{icon}</p>
-      <p
-        className={`mt-1 text-xs font-medium uppercase tracking-wider ${
-          highlight ? "text-slate-400" : "text-slate-400"
-        }`}
-      >
-        {title}
-      </p>
-      <p className="mt-0.5 text-lg font-extrabold tracking-tight">{big}</p>
-      <p className={`mt-0.5 text-[11px] ${highlight ? "text-slate-300" : "text-slate-400"}`}>
-        {sub}
-      </p>
+    <div className="flex flex-1 flex-col items-center rounded-xl border border-line bg-surface-2 p-4 text-center">
+      <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${toneChip[tone]}`}>
+        <Icon size={18} strokeWidth={1.75} />
+      </span>
+      <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted">{title}</p>
+      <p className="mt-0.5 text-lg font-bold tracking-tight text-ink">{big}</p>
+      <p className="mt-0.5 text-[11px] text-muted">{sub}</p>
     </div>
   );
 }
 
 function FlowArrow({ amount, label, tone }) {
   return (
-    <div className="flex shrink-0 flex-col items-center justify-center px-1 py-1 sm:px-2">
-      <p className={`text-sm font-bold tabular-nums ${tone}`}>{naira(amount)}</p>
-      {/* down on mobile (stacked), right on desktop (side by side) */}
-      <span className="text-xl leading-none text-slate-300 sm:hidden">↓</span>
-      <span className="hidden text-xl leading-none text-slate-300 sm:block">⟶</span>
-      <p className="text-[10px] text-slate-400">{label}</p>
+    <div className="flex shrink-0 flex-col items-center justify-center gap-0.5 px-1 py-1 sm:px-2">
+      <p className={`font-mono text-sm font-semibold tabular-nums ${tone}`}>{naira(amount)}</p>
+      <ArrowRight size={18} strokeWidth={2} className="hidden text-faint sm:block" />
+      <ArrowRight size={16} strokeWidth={2} className="rotate-90 text-faint sm:hidden" />
+      <p className="text-[10px] uppercase tracking-wide text-faint">{label}</p>
     </div>
   );
 }

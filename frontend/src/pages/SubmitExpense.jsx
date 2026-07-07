@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Check, KeyRound } from "lucide-react";
 import { api } from "../api.js";
 import { Card, Button, Input, Select, EmptyState, ErrorNote } from "../components/ui.jsx";
 
@@ -55,7 +56,7 @@ export default function SubmitExpense() {
     return (
       <Card>
         <EmptyState
-          icon="🔑"
+          icon={KeyRound}
           title="Open your personal link to request an expense"
           subtitle="Requests carry the requester's name — we need to know who you are."
         />
@@ -66,9 +67,9 @@ export default function SubmitExpense() {
   const verified = lookup.isSuccess && lookup.data?.accountName;
 
   return (
-    <Card className="mx-auto max-w-xl p-8">
-      <h1 className="mb-1 text-lg font-bold">Request an expense</h1>
-      <p className="mb-6 text-sm text-slate-500">
+    <Card className="mx-auto max-w-xl p-6 sm:p-8">
+      <h1 className="mb-1 text-lg font-bold text-ink">Request an expense</h1>
+      <p className="mb-6 text-sm text-muted">
         Your reason goes on the public ledger, and the committee's decision — with their name —
         follows it forever.
       </p>
@@ -104,8 +105,8 @@ export default function SubmitExpense() {
           required
         />
 
-        <hr className="border-slate-100" />
-        <p className="text-sm font-semibold text-slate-700">Where the money goes</p>
+        <hr className="border-line" />
+        <p className="text-sm font-semibold text-ink">Where the money goes</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Select
             label="Recipient bank"
@@ -139,7 +140,9 @@ export default function SubmitExpense() {
             {lookup.isPending ? "Verifying…" : "Verify account"}
           </Button>
           {verified && (
-            <span className="text-sm font-medium text-emerald-700">✓ {lookup.data.accountName}</span>
+            <span className="inline-flex items-center gap-1 text-sm font-medium text-pos-ink">
+              <Check size={15} strokeWidth={2.25} /> {lookup.data.accountName}
+            </span>
           )}
         </div>
         <ErrorNote error={lookup.error} />
@@ -158,7 +161,7 @@ export default function SubmitExpense() {
           </Button>
         </div>
         {!verified && (
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted">
             Verify the recipient account before submitting — the payout goes exactly there.
           </p>
         )}

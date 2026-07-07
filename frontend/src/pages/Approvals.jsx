@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ShieldCheck, CheckCircle2 } from "lucide-react";
 import { api } from "../api.js";
 import { naira, formatTime } from "../lib/format.js";
 import { Card, CardHeader, Button, Spinner, EmptyState, ErrorNote } from "../components/ui.jsx";
@@ -34,7 +35,8 @@ export default function Approvals() {
     return (
       <Card>
         <EmptyState
-          icon="🛡️"
+          icon={ShieldCheck}
+          tone="info"
           title="Committee only"
           subtitle="Only committee members can approve or reject expense requests."
         />
@@ -55,9 +57,9 @@ export default function Approvals() {
         {expenses.isLoading ? (
           <Spinner />
         ) : pending.length === 0 ? (
-          <EmptyState icon="✅" title="Nothing pending" subtitle="New expense requests will land here." />
+          <EmptyState icon={CheckCircle2} tone="pos" title="Nothing pending" subtitle="New expense requests will land here." />
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-line">
             {pending.map((e) => (
               <PendingRow
                 key={e.id}
@@ -78,20 +80,20 @@ export default function Approvals() {
       {decided.length > 0 && (
         <Card>
           <CardHeader title="Recently decided" subtitle="The last few calls the committee made." />
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-line">
             {decided.map((e) => (
               <li key={e.id}>
                 <Link
                   to={`/c/${collectiveId}/expenses/${e.id}`}
-                  className="flex items-center justify-between gap-4 px-6 py-3 transition-colors hover:bg-slate-50"
+                  className="flex items-center justify-between gap-4 px-5 py-3 transition-colors hover:bg-surface-2 sm:px-6"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{e.reason}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="truncate text-sm font-medium text-ink">{e.reason}</p>
+                    <p className="text-xs text-muted">
                       {e.status === "rejected" ? "rejected" : "approved"} by {e.decided_by_name}
                     </p>
                   </div>
-                  <p className="text-sm font-bold tabular-nums">{naira(e.amount)}</p>
+                  <p className="font-mono text-sm font-semibold tabular-nums text-ink">{naira(e.amount)}</p>
                 </Link>
               </li>
             ))}
@@ -109,25 +111,25 @@ function PendingRow({ expense, collectiveId, me, approve, reject }) {
   const isOwn = expense.requested_by === me.id;
 
   return (
-    <li className="px-6 py-4">
+    <li className="px-5 py-4 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link to={`/c/${collectiveId}/expenses/${expense.id}`} className="min-w-0 flex-1 hover:underline">
-          <p className="text-sm font-medium">{expense.reason}</p>
-          <p className="text-xs text-slate-400">
+        <Link to={`/c/${collectiveId}/expenses/${expense.id}`} className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-ink hover:underline">{expense.reason}</p>
+          <p className="text-xs text-muted">
             to {expense.recipient_name} · requested by {expense.requested_by_name} ·{" "}
             {formatTime(expense.timestamp)}
           </p>
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-sm font-bold tabular-nums">{naira(expense.amount)}</p>
+          <p className="font-mono text-sm font-semibold tabular-nums text-ink">{naira(expense.amount)}</p>
           {isOwn ? (
-            <p className="text-xs italic text-slate-400">your own request — someone else decides</p>
+            <p className="text-xs italic text-muted">your own request — someone else decides</p>
           ) : (
             <>
-              <Button disabled={busy} onClick={() => approve.mutate(expense.id)}>
+              <Button className="min-h-9 px-3 text-xs" disabled={busy} onClick={() => approve.mutate(expense.id)}>
                 {approve.isPending ? "Disbursing…" : "Approve & pay"}
               </Button>
-              <Button variant="danger" disabled={busy} onClick={() => setRejecting(!rejecting)}>
+              <Button variant="danger" className="min-h-9 px-3 text-xs" disabled={busy} onClick={() => setRejecting(!rejecting)}>
                 Reject
               </Button>
             </>
@@ -135,9 +137,9 @@ function PendingRow({ expense, collectiveId, me, approve, reject }) {
         </div>
       </div>
       {rejecting && !isOwn && (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <input
-            className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            className="min-h-11 flex-1 rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-brand/25"
             placeholder="Reason for rejection — goes on the public ledger"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
