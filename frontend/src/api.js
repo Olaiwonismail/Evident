@@ -6,7 +6,12 @@ import { demoApi, DEMO_ID } from "./demo/store.js";
 export { DEMO_ID };
 export const isDemoCollective = (id) => id === DEMO_ID;
 
-const API = import.meta.env.VITE_API_URL || "https://evident-z4te.onrender.com";
+// TESTING: lets an organizer approve/reject their own expense request so a
+// solo tester can run the whole loop. Set back to false to restore the
+// "no solo spending" guard for the real demo.
+export const ALLOW_SELF_APPROVAL = true;
+
+const API = "http://127.0.0.1:8000" || "https://evident-z4te.onrender.com";
 
 async function request(path, options = {}) {
   const res = await fetch(`${API}${path}`, {

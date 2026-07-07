@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck, CheckCircle2 } from "lucide-react";
-import { api } from "../api.js";
+import { api, ALLOW_SELF_APPROVAL } from "../api.js";
 import { naira, formatTime } from "../lib/format.js";
 import { Card, CardHeader, Button, Spinner, EmptyState, ErrorNote } from "../components/ui.jsx";
 
@@ -108,7 +108,7 @@ function PendingRow({ expense, collectiveId, me, approve, reject }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const busy = approve.isPending || reject.isPending;
-  const isOwn = expense.requested_by === me.id;
+  const isOwn = expense.requested_by === me.id && !ALLOW_SELF_APPROVAL;
 
   return (
     <li className="px-5 py-4 sm:px-6">

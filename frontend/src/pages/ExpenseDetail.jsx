@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ExternalLink } from "lucide-react";
-import { api } from "../api.js";
+import { api, ALLOW_SELF_APPROVAL } from "../api.js";
 import { naira, formatTime, groupDigits } from "../lib/format.js";
 import { Card, Button, Input, Spinner, StatusBadge, ErrorNote } from "../components/ui.jsx";
 
@@ -55,7 +55,8 @@ export default function ExpenseDetail() {
     (b) => (b.bankCode || b.code) === e.recipient_bank_code
   );
   const bankName = e.recipient_bank_name || bank?.bankName || bank?.name || e.recipient_bank_code;
-  const canDecide = isCommittee && e.status === "pending" && me?.id !== e.requested_by;
+  const canDecide =
+    isCommittee && e.status === "pending" && (ALLOW_SELF_APPROVAL || me?.id !== e.requested_by);
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
