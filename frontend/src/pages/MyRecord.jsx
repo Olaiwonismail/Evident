@@ -1,18 +1,37 @@
+import { Link, useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { naira, formatTime } from "../lib/format.js";
-import { Card, CardHeader, Spinner, EmptyState, StatusBadge } from "./ui.jsx";
+import { Card, CardHeader, Button, Spinner, EmptyState, StatusBadge } from "../components/ui.jsx";
 
-export default function DuesTab({ collectiveId, me }) {
+// A member's personal view: what they've paid, what they still owe, and
+// their full contribution history.
+export default function MyRecord() {
+  const { collectiveId, me } = useOutletContext();
+
   const q = useQuery({
-    queryKey: ["contributions", collectiveId, me.id],
+    queryKey: ["contributions", collectiveId, me?.id],
     queryFn: () => api.getContributions(collectiveId, me.id),
+    enabled: !!me,
     refetchInterval: 15_000,
   });
+
+  if (!me) {
+    return (
+      <Card>
+        <EmptyState
+          icon="🔑"
+          title="Open your personal link to see your record"
+          subtitle="Your contribution history is tied to who you are in the collective."
+        />
+      </Card>
+    );
+  }
 
   if (q.isLoading) return <Spinner />;
   const { dues_amount, dues_frequency, total_paid = 0, contributions = [] } = q.data || {};
   const pct = dues_amount ? Math.min(100, Math.round((total_paid / dues_amount) * 100)) : null;
+  const owed = dues_amount ? Math.max(0, dues_amount - total_paid) : null;
 
   return (
     <div className="space-y-6">
@@ -35,11 +54,20 @@ export default function DuesTab({ collectiveId, me }) {
           )}
         </Card>
         <Card className="p-5">
-          <p className="text-xs uppercase tracking-wider text-slate-400">Expected dues</p>
-          <p className="mt-1 text-2xl font-bold">
-            {dues_amount ? naira(dues_amount) : "—"}
+          <p className="text-xs uppercase tracking-wider text-slate-400">Still owed</p>
+          <p className={`mt-1 text-2xl font-bold ${owed ? "text-amber-600" : ""}`}>
+            {owed === null ? "—" : owed === 0 ? "₦0 ✓" : naira(owed)}
           </p>
-          {dues_frequency && <p className="text-xs text-slate-400">{dues_frequency}</p>}
+          {dues_frequency && dues_amount && (
+            <p className="text-xs text-slate-400">
+              of {naira(dues_amount)} {dues_frequency}
+            </p>
+          )}
+          {owed > 0 && (
+            <Link to={`/c/${collectiveId}/pay`} className="mt-3 block">
+              <Button className="w-full">Pay now</Button>
+            </Link>
+          )}
         </Card>
         <Card className="p-5">
           <p className="text-xs uppercase tracking-wider text-slate-400">Payments made</p>

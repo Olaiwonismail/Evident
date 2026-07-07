@@ -37,6 +37,10 @@ class InviteMemberRequest(BaseModel):
     role: str = "member"
 
 
+class SetRoleRequest(BaseModel):
+    role: str
+
+
 @router.post("")
 async def create_collective(body: CreateCollectiveRequest, db: AsyncSession = Depends(get_db)):
     import uuid
@@ -136,3 +140,25 @@ async def invite_member(collective_id: str, body: InviteMemberRequest, db: Async
 async def list_members(collective_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Member).where(Member.collective_id == collective_id))
     return result.scalars().all()
+
+
+@router.post("/{collective_id}/members/{member_id}/role")
+async def set_member_role(
+    collective_id: str,
+    member_id: str,
+    body: SetRoleRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    if body.role not in ("member", "committee"):
+        raise HTTPException(status_code=400, detail="Role must be 'member' or 'committee'")
+    result = await db.execute(
+        select(Member).where(Member.id == member_id, Member.collective_id == collective_id)
+    )
+    member = result.scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+    if member.role == "organizer":
+        raise HTTPException(status_code=400, detail="The organizer's role can't be changed")
+    member.role = body.role
+    await db.commit()
+    return {"id": member.id, "name": member.name, "role": member.role}

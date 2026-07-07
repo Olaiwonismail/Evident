@@ -1,28 +1,36 @@
 import { useState } from "react";
-import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useOutletContext } from "react-router-dom";
+import { useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { naira } from "../lib/format.js";
-import { Card, CardHeader, Button, Input, Select, Spinner, EmptyState, Badge, ErrorNote, CopyButton } from "./ui.jsx";
+import {
+  Card, CardHeader, Button, Input, Select, EmptyState, Badge, ErrorNote, CopyButton,
+} from "../components/ui.jsx";
 
 const roleTone = { organizer: "purple", committee: "blue", member: "slate" };
 
-export default function MembersTab({ collectiveId, collective, isOrganizer }) {
+// Who's in, who holds committee power, and (for the organizer) the levers to
+// change that: invites and committee assignment.
+export default function Members() {
+  const { collectiveId, collective, members, isOrganizer } = useOutletContext();
+  const queryClient = useQueryClient();
   const [inviting, setInviting] = useState(false);
-  const members = useQuery({
-    queryKey: ["members", collectiveId],
-    queryFn: () => api.getMembers(collectiveId),
-  });
 
   const contributionQueries = useQueries({
-    queries: (members.data || []).map((m) => ({
+    queries: members.map((m) => ({
       queryKey: ["contributions", collectiveId, m.id],
       queryFn: () => api.getContributions(collectiveId, m.id),
       staleTime: 15_000,
     })),
   });
 
-  if (members.isLoading) return <Spinner />;
+  const setRole = useMutation({
+    mutationFn: ({ memberId, role }) => api.setMemberRole(collectiveId, memberId, role),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["members", collectiveId] }),
+  });
+
   const dues = collective.dues_amount;
+  const committee = members.filter((m) => m.role === "committee" || m.role === "organizer");
 
   return (
     <div className="space-y-6">
@@ -32,28 +40,31 @@ export default function MembersTab({ collectiveId, collective, isOrganizer }) {
 
       <Card>
         <CardHeader
-          title={`Members (${(members.data || []).length})`}
-          subtitle={dues ? `Dues: ${naira(dues)} ${collective.dues_frequency}` : null}
+          title={`Members (${members.length})`}
+          subtitle={
+            `${committee.length} can approve expenses` +
+            (dues ? ` · dues ${naira(dues)} ${collective.dues_frequency}` : "")
+          }
           action={
             isOrganizer && !inviting ? (
               <Button onClick={() => setInviting(true)}>+ Invite</Button>
             ) : null
           }
         />
-        {(members.data || []).length === 0 ? (
+        {members.length === 0 ? (
           <EmptyState icon="👥" title="No members yet" />
         ) : (
           <ul className="divide-y divide-slate-100">
-            {members.data.map((m, i) => {
+            {members.map((m, i) => {
               const paid = contributionQueries[i]?.data?.total_paid ?? null;
               const owes = dues && paid !== null ? Math.max(0, dues - paid) : null;
               return (
-                <li key={m.id} className="flex items-center justify-between gap-4 px-6 py-4">
-                  <div>
+                <li key={m.id} className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+                  <div className="min-w-0">
                     <p className="text-sm font-medium">{m.name}</p>
                     <p className="text-xs text-slate-400">{m.phone || m.email || "no contact"}</p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     {paid !== null && (
                       <div className="text-right">
                         <p className="text-sm font-semibold text-emerald-600">{naira(paid)} paid</p>
@@ -66,13 +77,38 @@ export default function MembersTab({ collectiveId, collective, isOrganizer }) {
                       </div>
                     )}
                     <Badge tone={roleTone[m.role] || "slate"}>{m.role}</Badge>
+                    {isOrganizer && m.role !== "organizer" && (
+                      <Button
+                        variant="secondary"
+                        className="!px-3 !py-1.5 !text-xs"
+                        disabled={setRole.isPending}
+                        onClick={() =>
+                          setRole.mutate({
+                            memberId: m.id,
+                            role: m.role === "committee" ? "member" : "committee",
+                          })
+                        }
+                      >
+                        {m.role === "committee" ? "Remove from committee" : "Make committee"}
+                      </Button>
+                    )}
                   </div>
                 </li>
               );
             })}
           </ul>
         )}
+        <div className="px-6 pb-4">
+          <ErrorNote error={setRole.error} />
+        </div>
       </Card>
+
+      {isOrganizer && (
+        <p className="px-2 text-xs text-slate-400">
+          Committee members can approve or reject expenses — every decision carries their name on
+          the public ledger. Assign at least one person besides yourself.
+        </p>
+      )}
     </div>
   );
 }
@@ -93,14 +129,15 @@ function InviteMember({ collectiveId, onClose }) {
   });
 
   if (invite.isSuccess) {
-    const link = `${window.location.origin}/c/${collectiveId}?m=${invite.data.id}`;
+    const link = `${window.location.origin}/join/${collectiveId}/${invite.data.id}`;
     return (
       <Card className="p-6">
         <p className="text-sm font-semibold">
-          {invite.data.name} added as {invite.data.role} 🎉
+          {invite.data.name} invited as {invite.data.role} 🎉
         </p>
         <p className="mt-1 text-xs text-slate-400">
-          Send them this personal link — opening it is how they access the collective as themselves.
+          Send them this invite link — opening it shows them the collective and lets them accept
+          and set up their account.
         </p>
         <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
           <p className="truncate text-xs text-slate-500">{link}</p>
@@ -116,7 +153,9 @@ function InviteMember({ collectiveId, onClose }) {
           >
             Invite another
           </Button>
-          <Button variant="secondary" onClick={onClose}>Done</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Done
+          </Button>
         </div>
       </Card>
     );
@@ -151,7 +190,7 @@ function InviteMember({ collectiveId, onClose }) {
         <ErrorNote error={invite.error} />
         <div className="flex gap-3">
           <Button type="submit" disabled={invite.isPending}>
-            {invite.isPending ? "Adding…" : "Add member"}
+            {invite.isPending ? "Sending invite…" : "Send invite"}
           </Button>
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel

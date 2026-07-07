@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -5,6 +7,8 @@ from sqlalchemy import select
 from app.database import get_db
 from app.models.expense import Expense
 from app.models.collective import Collective
+from app.models.member import Member
+from app.models.ledger import LedgerEntry
 from app.services import nomba_client, disbursement
 
 router = APIRouter(prefix="/collectives", tags=["expenses"])
@@ -26,6 +30,33 @@ class ApproveExpenseRequest(BaseModel):
 class RejectExpenseRequest(BaseModel):
     approver_id: str
     reason: str
+
+
+async def _member_names(collective_id: str, db: AsyncSession) -> dict[str, str]:
+    result = await db.execute(select(Member).where(Member.collective_id == collective_id))
+    return {m.id: m.name for m in result.scalars().all()}
+
+
+def _serialize_expense(e: Expense, names: dict[str, str]) -> dict:
+    decided = e.status not in ("pending",)
+    return {
+        "id": e.id,
+        "amount": float(e.amount),
+        "reason": e.reason,
+        "receipt_url": e.receipt_url,
+        "status": e.status,
+        "requested_by": e.requested_by,
+        "requested_by_name": names.get(e.requested_by),
+        "recipient_name": e.recipient_name,
+        "recipient_account": e.recipient_account,
+        "recipient_bank_code": e.recipient_bank_code,
+        "timestamp": e.timestamp.isoformat(),
+        "decided_by": e.approved_by,
+        "decided_by_name": names.get(e.approved_by),
+        "decided_at": e.updated_at.isoformat() if decided and e.updated_at else None,
+        "decision_reason": e.rejection_reason,
+        "paid_at": e.updated_at.isoformat() if e.status == "paid" and e.updated_at else None,
+    }
 
 
 @router.post("/{collective_id}/expenses")
@@ -57,12 +88,8 @@ async def submit_expense(collective_id: str, body: SubmitExpenseRequest, db: Asy
     )
     db.add(expense)
     await db.commit()
-    return {
-        "id": expense.id,
-        "status": expense.status,
-        "recipient_name": recipient_name,
-        "amount": expense.amount,
-    }
+    names = await _member_names(collective_id, db)
+    return _serialize_expense(expense, names)
 
 
 @router.get("/{collective_id}/expenses")
@@ -73,18 +100,20 @@ async def list_expenses(collective_id: str, db: AsyncSession = Depends(get_db)):
         .order_by(Expense.timestamp.desc())
     )
     expenses = result.scalars().all()
-    return [
-        {
-            "id": e.id,
-            "amount": float(e.amount),
-            "reason": e.reason,
-            "status": e.status,
-            "recipient_name": e.recipient_name,
-            "approved_by": e.approved_by,
-            "timestamp": e.timestamp.isoformat(),
-        }
-        for e in expenses
-    ]
+    names = await _member_names(collective_id, db)
+    return [_serialize_expense(e, names) for e in expenses]
+
+
+@router.get("/{collective_id}/expenses/{expense_id}")
+async def get_expense(collective_id: str, expense_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Expense).where(Expense.id == expense_id, Expense.collective_id == collective_id)
+    )
+    expense = result.scalar_one_or_none()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    names = await _member_names(collective_id, db)
+    return _serialize_expense(expense, names)
 
 
 @router.post("/{collective_id}/expenses/{expense_id}/approve")
@@ -115,8 +144,32 @@ async def reject_expense(
     if not expense or expense.status != "pending":
         raise HTTPException(status_code=404, detail="Expense not found or not pending")
 
+    approver_result = await db.execute(select(Member).where(Member.id == body.approver_id))
+    approver = approver_result.scalar_one_or_none()
+    if not approver or approver.role not in ("committee", "organizer"):
+        raise HTTPException(status_code=403, detail="Only committee members can reject expenses")
+
     expense.status = "rejected"
     expense.approved_by = body.approver_id
     expense.rejection_reason = body.reason
+
+    # zero-amount marker so the rejection stays visible on the public ledger
+    balance_result = await db.execute(
+        select(LedgerEntry.balance_after)
+        .where(LedgerEntry.collective_id == collective_id)
+        .order_by(LedgerEntry.timestamp.desc())
+        .limit(1)
+    )
+    balance = balance_result.scalar_one_or_none() or Decimal("0")
+    db.add(LedgerEntry(
+        collective_id=collective_id,
+        type="expense_rejected",
+        ref_id=expense.id,
+        amount=Decimal("0"),
+        balance_after=balance,
+        description=f"Rejected: {expense.reason[:80]}",
+        actor_name=f'rejected by {approver.name} — "{body.reason[:120]}"',
+    ))
+
     await db.commit()
     return {"id": expense.id, "status": "rejected", "reason": body.reason}
