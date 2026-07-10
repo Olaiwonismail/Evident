@@ -8,6 +8,19 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
+class NombaAPIError(Exception):
+    """Nomba signals validation failures as HTTP 200 with status:false and a
+    human message (no 'data' key). raise_for_status() misses those, so callers
+    used to hit an opaque KeyError on data['data'] instead of the real reason."""
+
+
+def _raise_for_nomba_error(data: dict) -> None:
+    if isinstance(data, dict) and data.get("status") is False:
+        raise NombaAPIError(
+            f"Nomba {data.get('code')}: {data.get('description')} — {data.get('message')}"
+        )
+
+
 def _parse_expires_at(value: str) -> datetime:
     """Nomba returns expiresAt as an ISO timestamp like 2026-07-03T00:54:40.287Z."""
     dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -88,7 +101,9 @@ async def _get(path: str, params: dict = None) -> dict:
             params=params,
         )
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+        _raise_for_nomba_error(data)
+        return data
 
 
 async def _post(path: str, body: dict) -> dict:
@@ -100,15 +115,24 @@ async def _post(path: str, body: dict) -> dict:
             headers=_auth_headers(),
         )
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+        _raise_for_nomba_error(data)
+        return data
 
 
 # ── Virtual Accounts ──────────────────────────────────────────────────────────
 
+def _clean_account_name(name: str) -> str:
+    """Nomba rejects account names with special characters (even a hyphen), so
+    keep only letters/digits/spaces, collapse whitespace, and cap at 50 chars."""
+    cleaned = "".join(c for c in name if c.isalnum() or c.isspace())
+    return " ".join(cleaned.split())[:50] or "Evident Account"
+
+
 async def create_virtual_account(collective_id: str, collective_name: str, callback_url: str) -> dict:
     data = await _post("/v1/accounts/virtual", {
         "accountRef": collective_id,
-        "accountName": collective_name,
+        "accountName": _clean_account_name(collective_name),
         "currency": "NGN",
         "callbackUrl": callback_url,
         # deliberately NOT setting expectedAmount — Evident handles reconciliation itself
@@ -123,7 +147,8 @@ async def create_member_virtual_account(
     the webhook can tell a member account apart from a collective account."""
     data = await _post("/v1/accounts/virtual", {
         "accountRef": f"mbr_{member_id}",
-        "accountName": f"{member_name} - {collective_name}"[:50],
+        # no hyphen separator — Nomba treats it as a special character and rejects it
+        "accountName": _clean_account_name(f"{member_name} {collective_name}"),
         "currency": "NGN",
         "callbackUrl": callback_url,
     })

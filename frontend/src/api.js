@@ -11,7 +11,13 @@ export const isDemoCollective = (id) => id === DEMO_ID;
 // "no solo spending" guard for the real demo.
 export const ALLOW_SELF_APPROVAL = true;
 
-const API = "http://127.0.0.1:8000" || "https://evident-z4te.onrender.com";
+// Vite sets import.meta.env.DEV=true under `vite dev`, false in a production
+// build — so local dev hits the local backend and the deployed UI hits Render,
+// with no manual toggling. (The old `A || B` always picked A, so the deployed
+// UI was silently calling localhost.)
+const API = import.meta.env.DEV
+  ? "http://127.0.0.1:8000"
+  : "https://evident-z4te.onrender.com";
 
 async function request(path, options = {}) {
   const res = await fetch(`${API}${path}`, {

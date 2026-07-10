@@ -21,20 +21,18 @@ def _extract_nuban(va: dict) -> str | None:
 
 
 async def _provision_member_account(member: Member, collective_name: str) -> None:
-    """Give a member their own dedicated pay-in account. Best-effort: if Nomba
-    fails, the member is still usable and the account can be backfilled later."""
+    """Give a member their own dedicated pay-in account. Raises on failure so the
+    caller can decide whether to surface it — never swallow, or accounts silently
+    go un-provisioned (see the Nomba 'special characters' bug that hid here)."""
     callback_url = f"{settings.app_base_url}/webhooks/nomba"
-    try:
-        va = await nomba_client.create_member_virtual_account(
-            member.id, member.name, collective_name, callback_url
-        )
-        if not _extract_nuban(va):
-            va = await nomba_client.fetch_virtual_account(f"mbr_{member.id}")
-        member.bank_account_number = _extract_nuban(va)
-        member.bank_name = va.get("bankName")
-        member.virtual_account_id = va.get("accountId") or va.get("walletId") or _extract_nuban(va)
-    except Exception:
-        logger.warning("Member VA provisioning failed for %s", member.id, exc_info=True)
+    va = await nomba_client.create_member_virtual_account(
+        member.id, member.name, collective_name, callback_url
+    )
+    if not _extract_nuban(va):
+        va = await nomba_client.fetch_virtual_account(f"mbr_{member.id}")
+    member.bank_account_number = _extract_nuban(va)
+    member.bank_name = va.get("bankName")
+    member.virtual_account_id = va.get("accountId") or va.get("walletId") or _extract_nuban(va)
 
 
 class CreateCollectiveRequest(BaseModel):
@@ -103,8 +101,13 @@ async def create_collective(body: CreateCollectiveRequest, db: AsyncSession = De
         await db.rollback()
         raise HTTPException(status_code=502, detail=f"Nomba virtual account creation failed: {exc}")
 
-    # the organizer is also a member who pays dues — give them their own account
-    await _provision_member_account(organizer, collective.name)
+    # the organizer is also a member who pays dues — give them their own account.
+    # best-effort: the collective's own account already exists, so don't fail the
+    # whole creation if this one call hiccups — but log loudly so it's never silent.
+    try:
+        await _provision_member_account(organizer, collective.name)
+    except Exception:
+        logger.error("Organizer VA provisioning failed for %s", organizer.id, exc_info=True)
 
     await db.commit()
     return {
@@ -155,7 +158,14 @@ async def invite_member(collective_id: str, body: InviteMemberRequest, db: Async
     db.add(member)
     await db.flush()  # assign member.id before provisioning its account
 
-    await _provision_member_account(member, collective.name)
+    try:
+        await _provision_member_account(member, collective.name)
+    except Exception as exc:
+        # not committed yet, so the member row rolls back — surface the real reason
+        logger.error("Member VA provisioning failed for %s", member.id, exc_info=True)
+        raise HTTPException(
+            status_code=502, detail=f"Could not provision member pay-in account: {exc}"
+        )
 
     await db.commit()
     return {
