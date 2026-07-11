@@ -15,9 +15,15 @@ class NombaAPIError(Exception):
 
 
 def _raise_for_nomba_error(data: dict) -> None:
-    if isinstance(data, dict) and data.get("status") is False:
+    # Nomba uses code "00" for success but INCONSISTENTLY sends status:false even
+    # on success (e.g. the transactions endpoint), so key off the error code, not
+    # status alone — otherwise successful reads look like failures.
+    if not isinstance(data, dict):
+        return
+    code = str(data.get("code")) if data.get("code") is not None else None
+    if data.get("status") is False and code not in (None, "00", "0"):
         raise NombaAPIError(
-            f"Nomba {data.get('code')}: {data.get('description')} — {data.get('message')}"
+            f"Nomba {code}: {data.get('description')} — {data.get('message')}"
         )
 
 
