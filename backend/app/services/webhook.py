@@ -136,11 +136,15 @@ async def process_payment_success(payload: dict, db: AsyncSession) -> None:
     sender_name = customer.get("senderName") or transaction.get("senderName") or transaction.get("narration", "")
     sender_account = customer.get("accountNumber") or transaction.get("senderAccountNumber", "")
 
-    # idempotency — skip if already processed
-    existing = await db.execute(
-        select(Contribution).where(Contribution.source_transfer_id == source_transfer_id)
-    )
-    if existing.scalar_one_or_none():
+    # idempotency — skip if already processed, as a contribution OR an unmatched
+    # transfer (so a Nomba retry / reconciliation replay can never double-record)
+    already_contribution = (await db.execute(
+        select(Contribution.id).where(Contribution.source_transfer_id == source_transfer_id)
+    )).scalar_one_or_none()
+    already_unmatched = (await db.execute(
+        select(UnmatchedTransfer.id).where(UnmatchedTransfer.source_transfer_id == source_transfer_id)
+    )).scalar_one_or_none()
+    if already_contribution or already_unmatched:
         logger.info("Duplicate webhook for %s — skipping", source_transfer_id)
         return
 

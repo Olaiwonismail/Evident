@@ -32,8 +32,12 @@ async def nomba_webhook(
     try:
         await process_payment_success(payload, db)
     except Exception as exc:
-        logger.error("Webhook processing error: %s", exc, exc_info=True)
-        # still return 200 so Nomba doesn't retry indefinitely — log for manual review
-        return {"status": "error", "detail": str(exc)}
+        # Return non-2xx so Nomba's retry/backoff policy kicks in — it only retries
+        # on a non-2xx response. A 200 here (the old behaviour) told Nomba the event
+        # was handled even when a transient DB blip meant nothing was saved, so it
+        # never retried and the payment silently dropped until reconciliation.
+        # Idempotency on source_transfer_id makes the retry safe from double-counting.
+        logger.error("Webhook processing failed, asking Nomba to retry: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="processing failed, please retry")
 
     return {"status": "ok"}
