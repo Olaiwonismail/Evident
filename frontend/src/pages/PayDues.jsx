@@ -122,7 +122,7 @@ export default function PayDues() {
               {groupDigits(payToNumber)}
             </p>
             <p className="mt-1 text-sm text-on-panel-dim">
-              {payToBank} · {me.name}
+              {payToBank} · {hasPersonalAccount ? me.name : `${collective.name} (shared account)`}
             </p>
             <div className="mt-3 flex justify-center">
               <CopyButton text={payToNumber} label="Copy account number" />

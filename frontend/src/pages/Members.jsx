@@ -67,6 +67,13 @@ export default function Members() {
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-ink">{m.name}</p>
                     <p className="text-xs text-muted">{m.phone || m.email || "no contact"}</p>
+                    {m.bank_account_number ? (
+                      <p className="mt-0.5 font-mono text-xs text-muted">
+                        pay-in {m.bank_account_number}
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 text-xs text-warn-ink">no pay-in account yet</p>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     {paid !== null && (
