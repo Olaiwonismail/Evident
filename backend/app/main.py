@@ -41,11 +41,16 @@ def _tx_to_webhook_payload(tx: dict) -> dict:
     }
 
 
-async def _reconciliation_sweep():
-    """Every 15 min: self-heal payments the webhook missed. Scans Nomba's account
-    feed for credits into ANY Evident account (member or collective) that we
-    haven't recorded, and replays each through the normal webhook logic so it
-    lands on the ledger / review queue automatically — no manual replay needed."""
+async def _reconciliation_sweep(max_pages: int = 10):
+    """Self-heal payments the webhook missed. Scans Nomba's account feed for
+    credits into ANY Evident account (member or collective) that we haven't
+    recorded, and replays each through the normal webhook logic so it lands on
+    the ledger / review queue automatically — no manual replay needed.
+
+    Nomba doesn't deliver webhooks to us on the shared hackathon account, so
+    this ISN'T just a backstop — a fast shallow sweep (newest page only, every
+    30s) is the primary path that makes payments feel real-time, with a deep
+    multi-page sweep every 15 min catching anything older."""
     from app.database import AsyncSessionLocal
     from sqlalchemy import select
     from app.models.collective import Collective
@@ -73,7 +78,7 @@ async def _reconciliation_sweep():
         # page through the shared account feed (it 404s on the per-NUBAN endpoint)
         txns, cursor = [], None
         try:
-            for _ in range(10):  # cap pages so a busy shared wallet can't run away
+            for _ in range(max_pages):  # cap pages so a busy shared wallet can't run away
                 data = await nomba_client.fetch_account_transactions(start_s, end_s, cursor=cursor, limit=100)
                 batch = data.get("results") or data.get("transactions") or []
                 txns += batch
@@ -118,7 +123,16 @@ async def lifespan(app: FastAPI):
         await nomba_client.get_token()  # issue token at startup
     except Exception as exc:
         logger.error("Nomba token issue failed at startup (will retry on first API call): %s", exc)
-    scheduler.add_job(_reconciliation_sweep, "interval", minutes=15)
+    # fast shallow sweep = the de-facto real-time path (Nomba doesn't deliver
+    # webhooks to us on the shared hackathon account); deep sweep as backstop.
+    scheduler.add_job(
+        _reconciliation_sweep, "interval", seconds=30,
+        kwargs={"max_pages": 1}, max_instances=1, coalesce=True,
+    )
+    scheduler.add_job(
+        _reconciliation_sweep, "interval", minutes=15,
+        kwargs={"max_pages": 10}, max_instances=1, coalesce=True,
+    )
     scheduler.start()
     logger.info("Evident backend started")
     yield
