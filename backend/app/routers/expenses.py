@@ -129,6 +129,11 @@ async def approve_expense(
         raise HTTPException(status_code=403, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    except nomba_client.NombaAPIError as exc:
+        # disburse_expense has already reversed the ledger debit and marked the
+        # expense failed — surface Nomba's actual reason (e.g. insufficient wallet
+        # funds) instead of a bare 500 the UI can't explain.
+        raise HTTPException(status_code=502, detail=f"Payout failed: {exc}")
     return {"id": expense.id, "status": expense.status}
 
 

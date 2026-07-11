@@ -9,7 +9,7 @@ import LedgerList from "../components/LedgerList.jsx";
 // The screen everyone opens to: live balance, what's pending, recent
 // activity, and one obvious way to pay in. The glass box at a glance.
 export default function Home() {
-  const { collectiveId, collective, me, isCommittee } = useOutletContext();
+  const { collectiveId, me, isCommittee } = useOutletContext();
 
   const ledger = useQuery({
     queryKey: ["ledger", collectiveId],
@@ -25,10 +25,8 @@ export default function Home() {
   if (ledger.isLoading) return <Spinner />;
   const { balance, entries = [] } = ledger.data || {};
   const pending = (expenses.data || []).filter((e) => e.status === "pending");
-  // a logged-in member sees their own dedicated pay-in account (deterministic
-  // attribution); the public view sees the collective's general account.
-  const payToNumber = me?.bank_account_number || collective.bank_account_number;
-  const payToBank = me?.bank_name || collective.bank_name;
+  // every payment goes to a member's OWN dedicated pay-in account — there's no
+  // collective-wide account surfaced in the UI.
   const personalAccount = !!me?.bank_account_number;
 
   return (
@@ -60,19 +58,33 @@ export default function Home() {
         </div>
 
         <Card className="flex flex-col justify-center p-6 lg:col-span-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            {personalAccount ? "Your pay-in account" : "Pay dues to"}
-          </p>
-          <p className="mt-2 font-mono text-2xl font-semibold tracking-wide text-ink">
-            {groupDigits(payToNumber)}
-          </p>
-          <p className="mt-1 text-sm text-muted">{payToBank}</p>
-          <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
-            <p className="text-xs text-muted">
-              {personalAccount ? "Dues here are credited to you" : "Transfer from any Nigerian bank"}
-            </p>
-            <CopyButton text={payToNumber} label="Copy" />
-          </div>
+          {personalAccount ? (
+            <>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                Your pay-in account
+              </p>
+              <p className="mt-2 font-mono text-2xl font-semibold tracking-wide text-ink">
+                {groupDigits(me.bank_account_number)}
+              </p>
+              <p className="mt-1 text-sm text-muted">{me.bank_name}</p>
+              <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
+                <p className="text-xs text-muted">Dues here are credited to you</p>
+                <CopyButton text={me.bank_account_number} label="Copy" />
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                Pay-in account
+              </p>
+              <p className="mt-2 text-sm text-ink">
+                Each member pays into their own dedicated account.
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                Open your personal invite link to see yours.
+              </p>
+            </>
+          )}
         </Card>
       </div>
 

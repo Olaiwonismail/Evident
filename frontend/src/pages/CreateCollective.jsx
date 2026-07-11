@@ -4,7 +4,6 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "../api.js";
 import { setSessionMember } from "../lib/session.js";
 import { Check, PartyPopper } from "lucide-react";
-import { groupDigits } from "../lib/format.js";
 import { Card, Button, Input, Select, ErrorNote, CopyButton, IconChip } from "../components/ui.jsx";
 import PublicShell from "../components/PublicShell.jsx";
 
@@ -53,20 +52,18 @@ export default function CreateCollective() {
             </div>
             <h2 className="text-xl font-bold text-ink">{c.name} is live</h2>
             <p className="mt-1 text-sm text-muted">
-              Members pay dues straight into this dedicated account — every transfer lands on the
-              public ledger automatically.
+              Invite your members and each gets their own dedicated pay-in account — every transfer
+              lands on the public ledger, credited to the right person automatically.
             </p>
           </div>
 
           <div className="rounded-2xl bg-panel p-6 text-center">
-            <p className="text-xs uppercase tracking-wide text-on-panel-dim">Pay dues to</p>
-            <p className="mt-2 font-mono text-3xl font-bold tracking-wide text-on-panel">
-              {groupDigits(c.bank_account_number)}
+            <p className="text-xs uppercase tracking-wide text-on-panel-dim">Next step</p>
+            <p className="mt-2 text-lg font-semibold text-on-panel">Invite your members</p>
+            <p className="mt-1 text-sm text-on-panel-dim">
+              Each member gets their own dedicated pay-in account, so every payment is credited to
+              them automatically.
             </p>
-            <div className="mt-3 flex justify-center">
-              <CopyButton text={c.bank_account_number} label="Copy number" />
-            </div>
-            <p className="mt-1 text-sm text-on-panel-dim">{c.bank_name}</p>
           </div>
 
           <div className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-line p-3">

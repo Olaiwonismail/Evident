@@ -143,4 +143,15 @@ app.include_router(banks.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    # touch the DB so keep-alive pings exercise the whole path webhooks use —
+    # a warm server with a dead connection pool used to pass this check
+    from sqlalchemy import text
+    from app.database import engine
+
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return {"status": "ok", "db": "ok"}
+    except Exception as exc:
+        logger.error("Health check DB probe failed: %s", exc)
+        return {"status": "ok", "db": "unreachable"}

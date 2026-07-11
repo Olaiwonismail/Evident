@@ -6,6 +6,13 @@ from app.config import settings
 engine = create_async_engine(
     settings.database_url,
     echo=False,
+    # Render's free Postgres silently drops idle connections, so a pooled
+    # connection can be dead by the time a webhook arrives — the save then fails
+    # on the first request after a quiet stretch. pre_ping tests each connection
+    # before use (reconnecting transparently); recycle retires them before they
+    # can go stale in the first place.
+    pool_pre_ping=True,
+    pool_recycle=300,
     connect_args={"check_same_thread": False} if settings.database_url.startswith("sqlite") else {},
 )
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

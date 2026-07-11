@@ -98,32 +98,36 @@ def _auth_headers() -> dict:
     }
 
 
+def _checked(resp: httpx.Response) -> dict:
+    """raise_for_status() discards Nomba's JSON body — which is where the actual
+    reason lives ('account not found', 'Insufficient fund', …). Keep it."""
+    if resp.status_code >= 400:
+        raise NombaAPIError(f"Nomba HTTP {resp.status_code}: {resp.text[:300]}")
+    data = resp.json()
+    _raise_for_nomba_error(data)
+    return data
+
+
 async def _get(path: str, params: dict = None) -> dict:
     await get_token()
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(
             f"{settings.nomba_base_url}{path}",
             headers=_auth_headers(),
             params=params,
         )
-        resp.raise_for_status()
-        data = resp.json()
-        _raise_for_nomba_error(data)
-        return data
+        return _checked(resp)
 
 
 async def _post(path: str, body: dict) -> dict:
     await get_token()
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(
             f"{settings.nomba_base_url}{path}",
             json=body,
             headers=_auth_headers(),
         )
-        resp.raise_for_status()
-        data = resp.json()
-        _raise_for_nomba_error(data)
-        return data
+        return _checked(resp)
 
 
 # ── Virtual Accounts ──────────────────────────────────────────────────────────

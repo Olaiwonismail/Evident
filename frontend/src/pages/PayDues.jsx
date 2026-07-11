@@ -51,12 +51,23 @@ export default function PayDues() {
     );
   }
 
+  if (!me.bank_account_number) {
+    return (
+      <Card>
+        <EmptyState
+          icon={KeyRound}
+          title="Your pay-in account isn't ready yet"
+          subtitle="Each member pays into their own dedicated account. Ask your organizer to finish setting yours up."
+        />
+      </Card>
+    );
+  }
+
   const dues = collective.dues_amount;
-  // each member has their own dedicated pay-in account; money into it is
-  // matched to them automatically. Fall back to the collective account.
-  const payToNumber = me.bank_account_number || collective.bank_account_number;
-  const payToBank = me.bank_name || collective.bank_name;
-  const hasPersonalAccount = !!me.bank_account_number;
+  // each member pays into their OWN dedicated account — money is matched to them
+  // automatically; no shared collective account is shown.
+  const payToNumber = me.bank_account_number;
+  const payToBank = me.bank_name;
 
   const startWaiting = async () => {
     const current = await api.getContributions(collectiveId, me.id);
@@ -100,9 +111,8 @@ export default function PayDues() {
         <div className="mb-6 text-center">
           <h1 className="text-lg font-bold text-ink">Pay your dues</h1>
           <p className="mt-1 text-sm text-muted">
-            {hasPersonalAccount
-              ? "Transfer any amount from any Nigerian bank into your personal account below — it's credited to you automatically."
-              : "Transfer from any Nigerian bank app to the collective account below."}
+            Transfer any amount from any Nigerian bank into your personal account below — it's
+            credited to you automatically.
           </p>
         </div>
 
@@ -116,13 +126,13 @@ export default function PayDues() {
           )}
           <div className="mt-5 border-t border-white/10 pt-5">
             <p className="text-xs uppercase tracking-wide text-on-panel-dim">
-              {hasPersonalAccount ? "Your personal account" : "Transfer to"}
+              Your personal account
             </p>
             <p className="mt-1 font-mono text-2xl font-bold tracking-wide text-on-panel">
               {groupDigits(payToNumber)}
             </p>
             <p className="mt-1 text-sm text-on-panel-dim">
-              {payToBank} · {hasPersonalAccount ? me.name : `${collective.name} (shared account)`}
+              {payToBank} · {me.name}
             </p>
             <div className="mt-3 flex justify-center">
               <CopyButton text={payToNumber} label="Copy account number" />
