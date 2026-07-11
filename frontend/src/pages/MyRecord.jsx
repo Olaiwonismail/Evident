@@ -1,9 +1,9 @@
 import { Link, useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { KeyRound, CircleDollarSign } from "lucide-react";
+import { KeyRound, CircleDollarSign, Link2 } from "lucide-react";
 import { api } from "../api.js";
 import { naira, formatTime } from "../lib/format.js";
-import { Card, CardHeader, Button, Spinner, EmptyState, StatusBadge } from "../components/ui.jsx";
+import { Card, CardHeader, Button, CopyButton, IconChip, Spinner, EmptyState, StatusBadge } from "../components/ui.jsx";
 
 // A member's personal view: what they've paid, what they still owe, and
 // their full contribution history.
@@ -33,6 +33,7 @@ export default function MyRecord() {
   const { dues_amount, dues_frequency, total_paid = 0, contributions = [] } = q.data || {};
   const pct = dues_amount ? Math.min(100, Math.round((total_paid / dues_amount) * 100)) : null;
   const owed = dues_amount ? Math.max(0, dues_amount - total_paid) : null;
+  const personalLink = `${window.location.origin}/c/${collectiveId}?m=${me.id}`;
 
   return (
     <div className="space-y-6">
@@ -78,10 +79,27 @@ export default function MyRecord() {
         )}
       </Card>
 
+      <Card className="p-5">
+        <div className="flex items-start gap-3">
+          <IconChip icon={Link2} tone="brand" />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-ink">Your personal link</p>
+            <p className="mt-0.5 text-sm text-muted">
+              Save this — it's how you get back to your account and pay dues from any device.
+              Keep it private: anyone with it can act as you.
+            </p>
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-line p-3">
+              <p className="truncate font-mono text-xs text-muted">{personalLink}</p>
+              <CopyButton text={personalLink} label="Copy link" />
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <Card>
         <CardHeader
           title="Your contributions"
-          subtitle="Pay from the bank account whose number matches your registered phone number so we can recognise you automatically."
+          subtitle="Every transfer into your personal pay-in account is credited to you and shows up here automatically."
         />
         {contributions.length === 0 ? (
           <EmptyState

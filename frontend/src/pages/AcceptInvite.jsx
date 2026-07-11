@@ -86,7 +86,8 @@ export default function AcceptInvite() {
           className="mt-6 w-full"
           onClick={() => {
             setSessionMember(collectiveId, memberId);
-            navigate(`/c/${collectiveId}`);
+            // land them on their own ?m= link — a durable, bookmarkable personal URL
+            navigate(`/c/${collectiveId}?m=${memberId}`);
           }}
         >
           Accept & join {c.name.split(" ")[0]}

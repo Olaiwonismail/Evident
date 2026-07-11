@@ -9,7 +9,7 @@ const roleTone = { organizer: "review", committee: "info", member: "neutral" };
 
 export default function CollectiveShell() {
   const { collectiveId } = useParams();
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
 
   // identity: a personal ?m= link wins and is remembered for the session
   const [memberId, setMemberIdState] = useState(
@@ -19,14 +19,16 @@ export default function CollectiveShell() {
     setMemberIdState(id);
     setSessionMember(collectiveId, id);
   };
+  // a ?m= link identifies the member; keep it in the URL so this stays a durable,
+  // bookmarkable personal link. Internal nav drops the query but falls back to the
+  // saved session identity, so who-you-are survives moving between tabs.
   useEffect(() => {
     const m = params.get("m");
     if (m) {
       setSessionMember(collectiveId, m);
-      params.delete("m");
-      setParams(params, { replace: true });
+      setMemberIdState(m);
     }
-  }, [collectiveId, params, setParams]);
+  }, [collectiveId, params]);
 
   const collective = useQuery({
     queryKey: ["collective", collectiveId],
