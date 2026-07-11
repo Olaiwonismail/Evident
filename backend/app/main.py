@@ -126,7 +126,7 @@ async def lifespan(app: FastAPI):
     # fast shallow sweep = the de-facto real-time path (Nomba doesn't deliver
     # webhooks to us on the shared hackathon account); deep sweep as backstop.
     scheduler.add_job(
-        _reconciliation_sweep, "interval", seconds=30,
+        _reconciliation_sweep, "interval", seconds=15,
         kwargs={"max_pages": 1}, max_instances=1, coalesce=True,
     )
     scheduler.add_job(
